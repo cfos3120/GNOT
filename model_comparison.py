@@ -134,6 +134,9 @@ class PINO_dataset_handling(DGLDataset):
 
 if __name__ == "__main__":
 
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+
     ''' 
     Create dataset:
        1. Batch
@@ -145,65 +148,70 @@ if __name__ == "__main__":
     FNO Dataset has coordinates already embedded (e.g. 4 channels)
     '''
 
-    print('_____________________________________\n FNO Model Study:')
-    data_sample_FNO = torch.rand([1,65,64,64,4])
+    for nx in [32,64,128,256]:
+        print('Running Test for Gridsize:', nx)
+        print('_____________________________________\n FNO Model Study:')
+        data_sample_FNO = torch.rand([1,20,nx,nx,4])
 
-    model_fno = FNO3d(modes1=[8, 8, 8, 8],
-                        modes2=[8, 8, 8, 8],
-                        modes3=[8, 8, 8, 8],
-                        fc_dim=128,
-                        layers=[64, 64, 64, 64, 64],
-                        in_dim=1 + 3,
-                        out_dim=1)
+        model_fno = FNO3d(modes1=[8, 8, 8, 8],
+                            modes2=[8, 8, 8, 8],
+                            modes3=[8, 8, 8, 8],
+                            fc_dim=128,
+                            layers=[64, 64, 64, 64, 64],
+                            in_dim=1 + 3,
+                            out_dim=1).to(device)
 
-    
-    print('FNO Model has ', get_num_params(model_fno), 'parameters')
+        
+        print('FNO Model has ', get_num_params(model_fno), 'parameters')
 
-    print('Running FNO Forward Pass')
-    print(f'    Input Shape:', data_sample_FNO.shape)
-    t0 = time.time()
-    out = model_fno(data_sample_FNO)
-    t1 = time.time()
-    print(f'    Total Forward Pass Inference Time: {t1-t0:.4f}s')
-    print(f'    Output Shape:', out.shape)
-
-
+        print('Running FNO Forward Pass')
+        print(f'    Input Shape:', data_sample_FNO.shape)
+        t0 = time.time()
+        out = model_fno(data_sample_FNO)
+        t1 = time.time()
+        print(f'    Total Forward Pass Inference Time: {t1-t0:.4f}s')
+        print(f'    Output Shape:', out.shape)
 
 
-    ## GNOT Model Pass through
-    print('\n\n_____________________________________\n GNOT Model Study:')
-    data_sample_GNOT = torch.rand([1,65,64,64,1])
-    
-    t0 = time.time()
-    train_dataset = PINO_dataset_handling(data_sample_GNOT)
-    dataloader = MIODataLoader(train_dataset, batch_size=1, shuffle=True, drop_last=False)
-    t1 = time.time()
-    print(f'Total Dataset transformation time: {t1-t0:.4f}s')
 
-    for batch_fno in dataloader:
-        break
-    
-    print('training dataset configurations for model: ', train_dataset.config)
-    model_gnot = CGPTNO(trunk_size=train_dataset.config['input_dim'] + train_dataset.config['theta_dim'],
-                        branch_sizes=train_dataset.config['branch_sizes'], 
-                        output_size=1,
-                        n_layers=3,
-                        n_hidden=128,
-                        n_head=1,
-                        attn_type='linear',
-                        ffn_dropout=0.0,
-                        attn_dropout=0.0,
-                        mlp_layers=2,
-                        act='gelu',
-                        horiz_fourier_dim=0
-                        )
 
-    print('GNOT Model has ', get_num_params(model_gnot), 'parameters')
+        ## GNOT Model Pass through
+        print('\n\n_____________________________________\n GNOT Model Study:')
+        data_sample_GNOT = torch.rand([1,20,nx,nx,1])
+        
+        t0 = time.time()
+        train_dataset = PINO_dataset_handling(data_sample_GNOT)
+        dataloader = MIODataLoader(train_dataset, batch_size=1, shuffle=True, drop_last=False)
+        t1 = time.time()
+        print(f'Total Dataset transformation time: {t1-t0:.4f}s')
 
-    print('Running GNOT Forward Pass')
-    g, u_p, g_u = batch_fno
-    t0 = time.time()
-    out = model_gnot(g, u_p, g_u)
-    t1 = time.time()
-    print(f'    Total Forward Pass Inference Time: {t1-t0:.4f}s')
-    print('     Output Shape:', out.shape)
+        for batch_fno in dataloader:
+            break
+        
+        print('training dataset configurations for model: ', train_dataset.config)
+        model_gnot = CGPTNO(trunk_size=train_dataset.config['input_dim'] + train_dataset.config['theta_dim'],
+                            branch_sizes=train_dataset.config['branch_sizes'], 
+                            output_size=1,
+                            n_layers=3,
+                            n_hidden=128,
+                            n_head=1,
+                            attn_type='linear',
+                            ffn_dropout=0.0,
+                            attn_dropout=0.0,
+                            mlp_layers=2,
+                            act='gelu',
+                            horiz_fourier_dim=0
+                            ).to(device)
+
+        print('GNOT Model has ', get_num_params(model_gnot), 'parameters')
+
+        # Note: Artemis has this version: GNU libc 2.12. Need to find what version of dgl is compatible with this.
+        
+        print('Running GNOT Forward Pass')
+        g, u_p, g_u = batch_fno
+        t0 = time.time()
+        out = model_gnot(g, u_p, g_u)
+        t1 = time.time()
+        print(f'    Total Forward Pass Inference Time: {t1-t0:.4f}s')
+        print('     Output Shape:', out.shape)
+        print('\n_____________________________________\n\n\n')
