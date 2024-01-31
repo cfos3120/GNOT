@@ -32,9 +32,10 @@ def console_printer(device, epoch, batch_n, batch_end_time,  batch_start_time, t
             , end=print_end)
 
 class PDE_weights():
-    def __init__(self, type = None, LR = 0.005, alpha = 0.16):
+    def __init__(self, device, type = None, LR = 0.005, alpha = 0.16):
         
         self.type = type
+        self.device = device
 
         if self.type == 'dynamic':
             self.w1 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
@@ -64,7 +65,7 @@ class PDE_weights():
             G2 = torch.norm(G2R[0], 2)
             G3R = torch.autograd.grad(l3, model_param[model_layer], retain_graph=True, create_graph=True)
             G3 = torch.norm(G3R[0], 2)
-            G_avg = (G1+G2+G3)/3
+            G_avg = ((G1+G2+G3)/3).to(self.device)
 
             # Calculating relative losses 
             lhat1 = torch.div(l1,self.l01)
@@ -116,7 +117,7 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
     pde_weight = args['pde_loss']
     epochs = args['epochs']
     loss_eval = 'Not Available'
-    pde_weights = PDE_weights(type=args['loss_weighting'])
+    pde_weights = PDE_weights(device, type=args['loss_weighting'])
 
     # 2. Training optimizer and learning rate scheduler
     if 'base_lr' in args:
