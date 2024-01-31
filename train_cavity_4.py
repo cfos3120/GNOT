@@ -99,7 +99,7 @@ class PDE_weights():
     def __getitem__(self,item):
         return self.params[item]
 
-def model_training_routine(model, args, training_dataset, testing_dataset, training_run_results):
+def model_training_routine(device, model, args, training_dataset, testing_dataset, training_run_results):
 
     # 1. Data and training parameters
     if args['fine_tuning']:
@@ -171,14 +171,14 @@ def model_training_routine(model, args, training_dataset, testing_dataset, train
             # 5.3. Calculate Monitoring Losses (reshape too)
             y_pred  = y_pred.reshape(len(u_p), training_dataset.nx, training_dataset.nx, 3)
 
-            if not dataset.vertex and not dataset.boundaries:
-                Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_cell_non_dim(U=training_dataset.y_normalizer.transform(y_pred,inverse=True), 
-                                                                                       lid_velocity=g_u[0], 
+            if not training_dataset.vertex and not training_dataset.boundaries:
+                Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_cell_non_dim(U=training_dataset.y_normalizer.transform(y_pred.to('cpu'),inverse=True), 
+                                                                                       lid_velocity=g_u[0].to('cpu'), 
                                                                                        nu=0.01, 
                                                                                        L=0.1)
-            elif dataset.vertex and dataset.boundaries:
-                Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=training_dataset.y_normalizer.transform(y_pred,inverse=True), 
-                                                                                       lid_velocity=g_u[0], 
+            elif training_dataset.vertex and training_dataset.boundaries:
+                Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=training_dataset.y_normalizer.transform(y_pred.to('cpu'),inverse=True), 
+                                                                                       lid_velocity=g_u[0].to('cpu'), 
                                                                                        nu=0.01, 
                                                                                        L=0.1)
                 
