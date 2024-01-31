@@ -212,7 +212,7 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
 
             # 5.4. Backwards Pass to Optimizing and Scheduling
             optimizer.zero_grad()
-            total_weighted_loss.backward()#retain_graph=True)
+            total_weighted_loss.backward(retain_graph=True)
             torch.nn.utils.clip_grad_norm_(model.parameters(), args['grad-clip'])
 
             pde_weights.calculate(model, model_layer=-1, l1=pde_l1, l2=pde_l2, l3=pde_l3)
