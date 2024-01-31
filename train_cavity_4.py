@@ -15,9 +15,11 @@ from utils import UnitTransformer
 from data_storage.loss_recording import total_model_dict, save_checkpoint
 from data_storage.cavity_2d_data_handling import Cavity_2D_dataset_handling_v2, NS_FDM_cavity_internal_vertex_non_dim, NS_FDM_cavity_internal_cell_non_dim
 
-def console_printer(epoch, batch_n, batch_end_time,  batch_start_time, training_dataloader, args, epochs, pde_weights, lid_velocity, training_loss, validation_loss):
+def console_printer(device, epoch, batch_n, batch_end_time,  batch_start_time, training_dataloader, args, epochs, pde_weights, lid_velocity, training_loss, validation_loss):
     # Print to Console:
     if (epoch == epochs-1 and batch_n == len(training_dataloader)-1) or (epoch == 0 and args['fine_tuning']): print_end = '\n\n'
+    if device == 'cuda:0':
+        print_end = '\n'
     else: print_end = '\r'
     
     print_end = '\r'
