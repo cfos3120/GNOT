@@ -337,7 +337,7 @@ class CGPTNO(nn.Module):
         optimizer = torch.optim.AdamW(optim_groups, lr=lr, betas=betas)
         return optimizer
 
-    def forward(self, g, u_p, inputs):
+    def forward(self, g, u_p, inputs=None):
 
         gs = dgl.unbatch(g)
         x = pad_sequence([_g.ndata['x'] for _g in gs]).permute(1, 0, 2)  # B, T1, F
