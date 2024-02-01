@@ -74,9 +74,9 @@ class PDE_weights():
             lhat_avg = (lhat1 + lhat2 + lhat3)/3
 
             # Calculating relative inverse training rates for tasks 
-            inv_rate1 = torch.div(lhat1,lhat_avg)
-            inv_rate2 = torch.div(lhat2,lhat_avg)
-            inv_rate3 = torch.div(lhat3,lhat_avg)
+            inv_rate1 = torch.div(lhat1,lhat_avg).to(self.device)
+            inv_rate2 = torch.div(lhat2,lhat_avg).to(self.device)
+            inv_rate3 = torch.div(lhat3,lhat_avg).to(self.device)
 
             # Calculating the constant target for Eq. 2 in the GradNorm paper
             alph = 0.16
