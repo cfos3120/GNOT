@@ -253,9 +253,9 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
         training_run_results.update_statistics(total_weighted_loss_list, 'Total Weighted Loss')
         training_run_results.update_statistics(loss_total_list, 'Training L2 Loss')
         
-        training_run_results.update_statistics(pde_l1_list, 'X-Momentum Loss')
-        training_run_results.update_statistics(pde_l2_list, 'Y-Momentum Loss')
-        training_run_results.update_statistics(pde_l3_list, 'Continuity Loss')
+        training_run_results.update_statistics(pde_l1_list.detach().numpy() , 'X-Momentum Loss')
+        training_run_results.update_statistics(pde_l2_list.detach().numpy() , 'Y-Momentum Loss')
+        training_run_results.update_statistics(pde_l3_list.detach().numpy() , 'Continuity Loss')
 
     save_checkpoint(args["save_dir"], args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
 
