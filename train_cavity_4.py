@@ -224,7 +224,7 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
 
             batch_end_time = default_timer()
 
-            console_printer(epoch, batch_n, batch_end_time,  batch_start_time, training_dataloader, args, epochs, 
+            console_printer(device, epoch, batch_n, batch_end_time,  batch_start_time, training_dataloader, args, epochs, 
                             pde_weights = pde_weights, lid_velocity=g_u[0][0][0].item(), 
                             training_loss=loss_total.item(), validation_loss=loss_eval)
 
