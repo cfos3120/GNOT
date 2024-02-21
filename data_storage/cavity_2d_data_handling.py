@@ -309,7 +309,7 @@ def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L):
     Re = (lid_velocity * L/nu).repeat(1,nx-2,ny-2)
 
     # create isotropic grid (non-dimensional i.e. L=1.0)
-    y = torch.tensor(np.linspace(0, 1, nx-1)[:-1], dtype=torch.float, device=device)
+    y = torch.tensor(np.linspace(0, 1, nx), dtype=torch.float, device=device)
     x = y
 
     # initialize Storage of derivatives as zeros

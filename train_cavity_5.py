@@ -24,26 +24,12 @@ def console_printer(device, epoch, batch_n, batch_end_time,  batch_start_time, t
     
     print_end = '\r'
     print(f'Epoch: {epoch}, Batch: {batch_n + 1}, ' + \
-            f'Mean L2 Training Loss: {training_loss:.3f}, ' + \
+            f'Mean L2 Training Loss: {training_loss}, ' + \
             f'Mean L2 Validation Loss: {validation_loss}, ' + \
             f'Estimated Time Left {(batch_end_time - batch_start_time)*(epochs-epoch+1)*(len(training_dataloader)-batch_n+1)/3600:.2f}hrs ' + \
             f'with PDE Loss Weights {pde_weights[0].item():.3f}, {pde_weights[1].item():.3f}, {pde_weights[2].item():.3f} ' + \
-            f'and lid velocities {lid_velocity:.1f} ms-1    '
+            f'and lid velocities {lid_velocity} ms-1    '
             , end=print_end)
-
-def hard_enforce_boundaries(y_pred):
-    # Velocities
-    y_pred[:,  0 ,  :, :] = 0                           # Bottom wall
-    y_pred[:,  : ,  0, :] = 0                           # Left wall
-    y_pred[:,  : , -1, :] = 0                           # Right wall
-    y_pred[:, -1 ,  :, 0], y_pred[:, -1 ,:,1] = 1, 0    # Lid
-
-    # Pressure:
-    y_pred[:,  0 ,  : ,2] = y_pred[:,  1 ,  : ,2]  # Bottom Wall
-    y_pred[:,  : ,  0 ,2] = y_pred[:,  : ,  1 ,2]  # Left Wall
-    y_pred[:,  : , -1 ,2] = y_pred[:,  : , -2 ,2]  # Right Wall
-    y_pred[:, -1 ,  : ,2] = y_pred[:, -2 ,  : ,2]  # Lid (y-vel)
-    return y_pred
 
 class PDE_weights():
     def __init__(self, device, type = None, LR = 0.005, alpha = 0.16):
@@ -55,22 +41,24 @@ class PDE_weights():
             self.w1 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
             self.w2 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
             self.w3 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
-            self.params = [self.w1, self.w2, self.w3]
+            self.w4 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
+            self.params = [self.w1, self.w2, self.w3, self.w4]
             self.optimizer2 = torch.optim.Adam(self.params, lr=LR)
             self.Gradloss = torch.nn.L1Loss()
         else:
-            self.params = torch.tensor([1.0,1.0,1.0])
+            self.params = torch.tensor([1.0,1.0,1.0,1.0])
 
-    def set_intial_loss(self, l01, l02, l03):
+    def set_intial_loss(self, l01, l02, l03, l04):
         if self.type == 'dynamic':
             self.l01 = l01.data  
             self.l02 = l02.data
             self.l03 = l03.data
+            self.l04 = l04.data
         elif self.type == 'scaled':
-            print('reset')
-            self.params = torch.tensor(l01.item() + l02.item() + l03.item())/(3*torch.tensor([l01.item(), l02.item(), l03.item()]))
-                    
-    def calculate(self, model, model_layer, l1,l2,l3):
+            # PDE only (not inclusive of IC) 
+            self.params[:3] = torch.tensor(l01.item() + l02.item() + l03.item())/(3*torch.tensor([l01.item(), l02.item(), l03.item()]))
+                 
+    def calculate(self, model, model_layer, l1,l2,l3,l4):
         if  self.type == 'dynamic':
             model_param = list(model.parameters())
 
@@ -80,30 +68,36 @@ class PDE_weights():
             G2 = torch.norm(G2R[0], 2)
             G3R = torch.autograd.grad(l3, model_param[model_layer], retain_graph=True, create_graph=True)
             G3 = torch.norm(G3R[0], 2)
-            G_avg = ((G1+G2+G3)/3).to(self.device)
+            G4R = torch.autograd.grad(l4, model_param[model_layer], retain_graph=True, create_graph=True)
+            G4 = torch.norm(G4R[0], 2)
+            G_avg = ((G1+G2+G3+G4)/4).to(self.device)
 
             # Calculating relative losses 
             lhat1 = torch.div(l1,self.l01)
             lhat2 = torch.div(l2,self.l02)
             lhat3 = torch.div(l3,self.l03)
-            lhat_avg = (lhat1 + lhat2 + lhat3)/3
+            lhat4 = torch.div(l4,self.l04)
+            lhat_avg = (lhat1 + lhat2 + lhat3 + lhat4)/3
 
             # Calculating relative inverse training rates for tasks 
             inv_rate1 = torch.div(lhat1,lhat_avg).to(self.device)
             inv_rate2 = torch.div(lhat2,lhat_avg).to(self.device)
             inv_rate3 = torch.div(lhat3,lhat_avg).to(self.device)
+            inv_rate4 = torch.div(lhat4,lhat_avg).to(self.device)
 
             # Calculating the constant target for Eq. 2 in the GradNorm paper
             alph = 0.16
             C1 = G_avg*(inv_rate1)**alph
             C2 = G_avg*(inv_rate2)**alph
             C3 = G_avg*(inv_rate3)**alph
+            C4 = G_avg*(inv_rate4)**alph
             C1 = C1.detach()
             C2 = C2.detach()
             C3 = C3.detach()
+            C4 = C4.detach()
 
             self.optimizer2.zero_grad()
-            self.Lgrad = (self.Gradloss(G1, C1) + self.Gradloss(G2, C2) + self.Gradloss(G3, C3))/3
+            self.Lgrad = (self.Gradloss(G1, C1) + self.Gradloss(G2, C2) + self.Gradloss(G3, C3) + self.Gradloss(G4, C4))/4
             self.Lgrad.backward()
 
             # Update Model Optimizer and Scheduler
@@ -111,8 +105,8 @@ class PDE_weights():
 
     def finalise(self):
         if  self.type == 'dynamic':
-            self.coef = 3/(self.w1 + self.w2 + self.w3)
-            self.params = [self.coef*self.w1, self.coef*self.w2, self.coef*self.w3]
+            self.coef = 3/(self.w1 + self.w2 + self.w3 + self.w4)
+            self.params = [self.coef*self.w1, self.coef*self.w2, self.coef*self.w3, self.coef*self.w4]
 
     def __getitem__(self,item):
         return self.params[item]
@@ -189,18 +183,14 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
             
             # 5.3. Calculate Monitoring Losses (reshape too)
             y_pred  = y_pred.reshape(len(u_p), training_dataset.nx, training_dataset.nx, 3)
-            y_pred=training_dataset.y_normalizer.transform(y_pred.to('cpu'),inverse=True)
-                                                               
-            # Hard Enforce Boundaries
-            if args['boundaries'] == 'hard': y_pred = hard_enforce_boundaries(y_pred)
 
             if not training_dataset.vertex and not training_dataset.boundaries:
-                Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_cell_non_dim(U=y_pred, 
+                Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_cell_non_dim(U=training_dataset.y_normalizer.transform(y_pred.to('cpu'),inverse=True), 
                                                                                        lid_velocity=g_u[0].to('cpu'), 
                                                                                        nu=0.01, 
                                                                                        L=0.1)
             elif training_dataset.vertex and training_dataset.boundaries:
-                Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=y_pred, 
+                Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=training_dataset.y_normalizer.transform(y_pred.to('cpu'),inverse=True), 
                                                                                        lid_velocity=g_u[0].to('cpu'), 
                                                                                        nu=0.01, 
                                                                                        L=0.1)
@@ -293,7 +283,7 @@ if __name__ == '__main__':
     # 0. Set Device
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    names = ['fine_dyn_hard_e5k_sub_4']#, 'ansatz_sub_4', 'ansatz_sub_2']
+    names = ['fine_scaled_sub_8_x2']#, 'ansatz_sub_4', 'ansatz_sub_2']
     subs = [4]#,4,2]
 
     for i in range(len(names)):
@@ -361,7 +351,7 @@ if __name__ == '__main__':
                     ).to(device)
         
         # 3. Training Settings
-        training_args['epochs']                 = 5000
+        training_args['epochs']                 = 1000
         training_args["save_dir"]               = 'gnot_cavity_v5_collab'
         #training_args["save_name"]              = 'scaled_v1'
         training_args['eval_while_training']    = True
@@ -376,10 +366,9 @@ if __name__ == '__main__':
         training_args['batchsize']              = 4
         training_args['component']              = 'all'
         training_args['normalizer']             = None
-        training_args['loss_weighting']         = 'dynamic' #'scaled' #scaled #scaled, dynamic or none
-        training_args['ckpt']                   = r'C:\Users\Noahc\Documents\USYD\PHD\0 - Work Space\analytics_v2_GNOT\google colab results\dynamic_sub_4.pt'
+        training_args['loss_weighting']         = None #'scaled' #scaled #scaled, dynamic or none
+        training_args['ckpt']                   = r'C:\Users\Noahc\Documents\USYD\PHD\0 - Work Space\analytics_v2_GNOT\google colab results\dynamic_sub_8.pt'
         training_args['fine_tuning']            = True
-        training_args['boundaries']             = 'hard'
 
         # Override any duplicate settings
         if training_args['fine_tuning']: 
