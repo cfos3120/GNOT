@@ -2,7 +2,7 @@ import numpy as np
 
 import torch
 import torch.nn.functional as F
-
+import argparse
 import dgl
 from dgl.data import DGLDataset
 
@@ -111,6 +111,15 @@ if __name__ == '__main__':
 
     model_args = dict()
 
+
+    parser = argparse.ArgumentParser(description='GNOT Parameter Study')
+    parser.add_argument('--output_sizes', type=int, default=1)
+    parser.add_argument('--resolutions', type=int, default=64)
+    parser.add_argument('--dimensions', type=int, default=2)
+    parser.add_argument('--n_layerss', type=int, default=3)
+    parser.add_argument('--n_iterations', type=int, default=1)
+    args = parser.parse_args()
+
     # Here we need to iterate over the following studies:
     #   - Change in Resolution for both 2D and 3D
     #   - Change in Channels for Both 2D and 3D
@@ -135,15 +144,15 @@ if __name__ == '__main__':
     model_args['hfourier_dim']        = 0
 
     # Variable Arguments
-    output_sizes = [1]
-    n_layerss = [3]
+    output_sizes = [args.output_sizes]
+    n_layerss = [args.n_layerss]
     attn_types = []
 
     # for averaging compute time
-    n_iterations = 1
+    n_iterations = args.n_iterations
 
-    dimensions = [2]
-    resolutions = [32,64,128,256,512]
+    dimensions = [args.dimensions]
+    resolutions = [args.resolutions]
 
     cases = list()
     for d in dimensions:
