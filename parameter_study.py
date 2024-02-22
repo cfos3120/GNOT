@@ -214,11 +214,10 @@ if __name__ == '__main__':
             print(torch.cuda.memory_allocated())
             for batch in dataloader:
                 g, u_p, g_u = batch
-                g, u_p, g_u = g.to(device), u_p.to(device), g_u.to(device)
 
             # 5.1. Forward Pass in Model
             inference_time = default_timer()
-            out = model(g, u_p, g_u).cpu()
+            out = model(g.to(device), u_p.to(device), g_u.to(device)).cpu()
             inference_time = default_timer() - inference_time
             time_storage += inference_time
             print(torch.cuda.memory_allocated())
