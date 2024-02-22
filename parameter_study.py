@@ -217,6 +217,8 @@ if __name__ == '__main__':
             for batch in dataloader:
                 g, u_p, g_u = batch
                 g, u_p, g_u = g.to(device), u_p.to(device), g_u.to(device)
+                break
+            
             if i == 0:
                 print('With Dataset Memory: ', torch.cuda.memory_allocated())
 
@@ -227,7 +229,7 @@ if __name__ == '__main__':
                 print('After Inference Pass Memory: ', torch.cuda.memory_allocated())
             inference_time = default_timer() - inference_time
             time_storage += inference_time
-            
+
         time_storage = time_storage / n_iterations 
 
         # And print parameters
