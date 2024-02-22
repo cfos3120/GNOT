@@ -221,7 +221,7 @@ if __name__ == '__main__':
             out = model(g, u_p, g_u).cpu()
             inference_time = default_timer() - inference_time
             time_storage += inference_time
-
+            print(torch.cuda.memory_allocated())
         time_storage = time_storage / n_iterations 
 
         # And print parameters
