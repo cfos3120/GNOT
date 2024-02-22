@@ -199,6 +199,8 @@ if __name__ == '__main__':
                     horiz_fourier_dim   = model_args['hfourier_dim']
                     ).to(device)
 
+        model = model.cuda()
+
         dataloader = MIODataLoader(dataset, batch_size=4, shuffle=False, drop_last=False)
 
         param_count = get_num_params(model)
@@ -216,7 +218,7 @@ if __name__ == '__main__':
 
             # 5.1. Forward Pass in Model
             inference_time = default_timer()
-            out = model(g, u_p, g_u)
+            out = model(g, u_p, g_u).cpu()
             inference_time = default_timer() - inference_time
             time_storage += inference_time
 
@@ -226,5 +228,5 @@ if __name__ == '__main__':
 
         print(f'    Mean Inference Time: {time_storage}')
         print(f'    Total Number of Parameters: {param_count}')
-        del model, g, u_p, g_u, dataloader, dataset
+        del out, model, g, u_p, g_u, dataloader, dataset
         torch.cuda.empty_cache()
