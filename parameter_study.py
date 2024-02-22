@@ -118,6 +118,7 @@ if __name__ == '__main__':
     parser.add_argument('--dimensions', type=int, default=2)
     parser.add_argument('--n_layerss', type=int, default=3)
     parser.add_argument('--n_iterations', type=int, default=1)
+    parser.add_argument('--batchsize', type=int, default=4)
     args = parser.parse_args()
 
     # Here we need to iterate over the following studies:
@@ -202,7 +203,7 @@ if __name__ == '__main__':
         model = model.cuda()
 
         print('Model Memory: ', torch.cuda.memory_allocated())
-        dataloader = MIODataLoader(dataset, batch_size=4, shuffle=False, drop_last=False)
+        dataloader = MIODataLoader(dataset, batch_size=args.batchsize, shuffle=False, drop_last=False)
 
         param_count = get_num_params(model)
 
