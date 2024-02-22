@@ -160,6 +160,8 @@ if __name__ == '__main__':
 
     for case in cases:
         
+        torch.cuda.empty_cache()
+
         print(f'For Case {case["serial"]}:')
         # 0. Overwrite Cases
         model_args['output_size']         = case['channels']
@@ -193,6 +195,7 @@ if __name__ == '__main__':
         param_count = get_num_params(model)
 
         #Iterate over how much
+        torch.no_grad()
         model.eval()
         time_storage = 0
         for i in range(n_iterations):
@@ -213,3 +216,5 @@ if __name__ == '__main__':
 
         print(f'    Mean Inference Time: {time_storage}')
         print(f'    Total Number of Parameters: {param_count}')
+        del model, g, u_p, g_u, dataloader, dataset
+        torch.cuda.empty_cache()
