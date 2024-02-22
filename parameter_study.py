@@ -211,7 +211,7 @@ if __name__ == '__main__':
         model.zero_grad()
         time_storage = 0
         for i in range(n_iterations):
-
+            print(torch.cuda.memory_allocated())
             for batch in dataloader:
                 g, u_p, g_u = batch
                 g, u_p, g_u = g.to(device), u_p.to(device), g_u.to(device)
