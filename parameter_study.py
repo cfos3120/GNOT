@@ -166,7 +166,6 @@ if __name__ == '__main__':
                                 'channels':c,
                                 'layers':l,
                                 })
-    print(cases)
 
     for case in cases:
         
