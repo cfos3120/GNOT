@@ -159,7 +159,7 @@ if __name__ == '__main__':
         for r in resolutions:
             for c in output_sizes:
                 for l in n_layerss:
-                    cases.append({'serial':f'case_d{d}r{r}_c{c}_l{l}', 
+                    cases.append({'serial':f'case_d{d}r{r}c{c}l{l}', 
                                 'dimension':d, 
                                 'resolution':r,
                                 'channels':c,
@@ -206,6 +206,7 @@ if __name__ == '__main__':
         #Iterate over how much
         torch.no_grad()
         model.eval()
+        model.zero_grad()
         time_storage = 0
         for i in range(n_iterations):
 
