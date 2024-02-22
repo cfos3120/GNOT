@@ -201,6 +201,7 @@ if __name__ == '__main__':
 
         model = model.cuda()
 
+        print('Model Memory: ', torch.cuda.memory_allocated())
         dataloader = MIODataLoader(dataset, batch_size=4, shuffle=False, drop_last=False)
 
         param_count = get_num_params(model)
@@ -214,10 +215,15 @@ if __name__ == '__main__':
             print(torch.cuda.memory_allocated())
             for batch in dataloader:
                 g, u_p, g_u = batch
+                g, u_p, g_u = g.to(device), u_p.to(device), g_u.to(device)
+            if i == 0:
+                print('With Dataset Memory: ', torch.cuda.memory_allocated())
 
             # 5.1. Forward Pass in Model
             inference_time = default_timer()
-            out = model(g.to(device), u_p.to(device), g_u.to(device)).cpu()
+            out = model(g, u_p, g_u).cpu()
+            if i == 0:
+                print('After Inference Pass Memory: ', torch.cuda.memory_allocated())
             inference_time = default_timer() - inference_time
             time_storage += inference_time
             print(torch.cuda.memory_allocated())

@@ -182,7 +182,7 @@ class CrossAttentionBlock(nn.Module):
 
         # self.ln6 = nn.LayerNorm(config.n_embd)      ## for ab study
         if config.attn_type == 'linear':
-            print('Using Linear Attention')
+            #print('Using Linear Attention')
             self.selfattn = LinearAttention(config)
             self.crossattn = LinearCrossAttention(config)
             # self.selfattn_branch = LinearAttention(config)
