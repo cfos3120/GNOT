@@ -213,7 +213,7 @@ if __name__ == '__main__':
         model.zero_grad()
         time_storage = 0
         for i in range(n_iterations):
-            print(torch.cuda.memory_allocated())
+
             for batch in dataloader:
                 g, u_p, g_u = batch
                 g, u_p, g_u = g.to(device), u_p.to(device), g_u.to(device)
@@ -227,12 +227,12 @@ if __name__ == '__main__':
                 print('After Inference Pass Memory: ', torch.cuda.memory_allocated())
             inference_time = default_timer() - inference_time
             time_storage += inference_time
-            print(torch.cuda.memory_allocated())
+            
         time_storage = time_storage / n_iterations 
 
         # And print parameters
 
         print(f'    Mean Inference Time: {time_storage}')
         print(f'    Total Number of Parameters: {param_count}')
-        del out, model, g, u_p, g_u, dataloader, dataset
+        del model, g, u_p, g_u, dataloader, dataset
         torch.cuda.empty_cache()
