@@ -221,7 +221,7 @@ if __name__ == '__main__':
 
             # 5.1. Forward Pass in Model
             inference_time = default_timer()
-            out = model(g, u_p, g_u).cpu()
+            model(g, u_p, g_u)
             if i == 0:
                 print('After Inference Pass Memory: ', torch.cuda.memory_allocated())
             inference_time = default_timer() - inference_time
