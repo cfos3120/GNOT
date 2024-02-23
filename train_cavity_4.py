@@ -52,9 +52,9 @@ class PDE_weights():
         self.device = device
 
         if self.type == 'dynamic':
-            self.w1 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
-            self.w2 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
-            self.w3 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
+            self.w1 = torch.tensor(torch.FloatTensor([1]), requires_grad=True).to(self.device)
+            self.w2 = torch.tensor(torch.FloatTensor([1]), requires_grad=True).to(self.device)
+            self.w3 = torch.tensor(torch.FloatTensor([1]), requires_grad=True).to(self.device)
             self.params = [self.w1, self.w2, self.w3]
             self.optimizer2 = torch.optim.Adam(self.params, lr=LR)
             self.Gradloss = torch.nn.L1Loss()
