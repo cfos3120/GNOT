@@ -215,9 +215,9 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
 
             #Du_dx, Dv_dy, continuity_eq = torch.flatten(Du_dx), torch.flatten(Dv_dy), torch.flatten(continuity_eq)
                 
-            pde_l1 = pde_weights[0]*loss_function_no_graph(Du_dx, torch.zeros_like(Du_dx)).to(device)#[0]
-            pde_l2 = pde_weights[1]*loss_function_no_graph(Dv_dy, torch.zeros_like(Dv_dy)).to(device)#[0]
-            pde_l3 = pde_weights[2]*loss_function_no_graph(continuity_eq, torch.zeros_like(continuity_eq)).to(device)#[0]
+            pde_l1 = pde_weights[0]*loss_function_no_graph(Du_dx, torch.zeros_like(Du_dx))#[0]
+            pde_l2 = pde_weights[1]*loss_function_no_graph(Dv_dy, torch.zeros_like(Dv_dy))#[0]
+            pde_l3 = pde_weights[2]*loss_function_no_graph(continuity_eq, torch.zeros_like(continuity_eq))#[0]
             
             # pde_l1 = loss_function_no_graph(Du_dx, torch.zeros_like(Du_dx))
             # pde_l2 = loss_function_no_graph(Dv_dy, torch.zeros_like(Dv_dy))
