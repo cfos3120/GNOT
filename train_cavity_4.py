@@ -227,7 +227,7 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
 
             #total_avg_pde_loss = torch.mean(torch.tensor([pde_l1, pde_l2, pde_l3], requires_grad=True))
             total_avg_pde_loss = (pde_l1 + pde_l2 + pde_l3)/3
-            total_weighted_loss = xy_weight*loss_total + pde_weight*total_avg_pde_loss
+            total_weighted_loss = xy_weight*loss_total.to(device) + pde_weight*total_avg_pde_loss
 
             pde_l1_list.append(pde_l1.item()/pde_weights[0].item())
             pde_l2_list.append(pde_l2.item()/pde_weights[1].item())
