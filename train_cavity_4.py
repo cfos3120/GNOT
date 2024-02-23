@@ -293,8 +293,8 @@ if __name__ == '__main__':
     # 0. Set Device
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    names = ['fine_dyn_hard_e5k_sub_4']#, 'ansatz_sub_4', 'ansatz_sub_2']
-    subs = [4]#,4,2]
+    names = ['ansatz_dyn_hard_sub_8']#, 'ansatz_sub_4', 'ansatz_sub_2']
+    subs = [8]#,4,2]
 
     for i in range(len(names)):
         model_args = dict()
@@ -361,7 +361,7 @@ if __name__ == '__main__':
                     ).to(device)
         
         # 3. Training Settings
-        training_args['epochs']                 = 5000
+        training_args['epochs']                 = 1000
         training_args["save_dir"]               = 'gnot_cavity_v5_collab'
         #training_args["save_name"]              = 'scaled_v1'
         training_args['eval_while_training']    = True
@@ -369,7 +369,7 @@ if __name__ == '__main__':
         training_args['base_lr']                = 0.001
         training_args['lr_method']              = 'cycle'
         training_args['scheduler_gamma']        = None  
-        training_args['xy_loss']                = 5.0
+        training_args['xy_loss']                = 0.0
         training_args['pde_loss']               = 1.0
         training_args['weight-decay']           = 0.00005
         training_args['grad-clip']              = 1000.0    
@@ -378,7 +378,7 @@ if __name__ == '__main__':
         training_args['normalizer']             = None
         training_args['loss_weighting']         = 'dynamic' #'scaled' #scaled #scaled, dynamic or none
         training_args['ckpt']                   = r'C:\Users\Noahc\Documents\USYD\PHD\0 - Work Space\analytics_v2_GNOT\google colab results\dynamic_sub_4.pt'
-        training_args['fine_tuning']            = True
+        training_args['fine_tuning']            = False
         training_args['boundaries']             = 'hard'
 
         # Override any duplicate settings
