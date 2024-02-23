@@ -128,8 +128,8 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
     if args['eval_while_training']:
         testing_dataloader = MIODataLoader(testing_dataset, batch_size=args['batchsize'], shuffle=False, drop_last=False)
 
-    xy_weight = args['xy_loss'].to(device)
-    pde_weight = args['pde_loss'].to(device)
+    xy_weight = args['xy_loss']
+    pde_weight = args['pde_loss']
     epochs = args['epochs']
     loss_eval = 'Not Available'
     pde_weights = PDE_weights(device, type=args['loss_weighting'])
