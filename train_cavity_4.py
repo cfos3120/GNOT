@@ -189,7 +189,7 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
             
             # 5.3. Calculate Monitoring Losses (reshape too)
             y_pred  = y_pred.reshape(len(u_p), training_dataset.nx, training_dataset.nx, 3)
-            y_pred=training_dataset.y_normalizer.transform(y_pred.to(device),inverse=True)
+            y_pred=training_dataset.y_normalizer.transform(y_pred.to('cpu'),inverse=True).to(device)
                                                                
             # Hard Enforce Boundaries
             if args['boundaries'] == 'hard': y_pred = hard_enforce_boundaries(y_pred)
