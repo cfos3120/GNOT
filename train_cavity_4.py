@@ -128,8 +128,8 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
     if args['eval_while_training']:
         testing_dataloader = MIODataLoader(testing_dataset, batch_size=args['batchsize'], shuffle=False, drop_last=False)
 
-    xy_weight = args['xy_loss']
-    pde_weight = args['pde_loss']
+    xy_weight = args['xy_loss'].to(device)
+    pde_weight = args['pde_loss'].to(device)
     epochs = args['epochs']
     loss_eval = 'Not Available'
     pde_weights = PDE_weights(device, type=args['loss_weighting'])
@@ -189,19 +189,19 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
             
             # 5.3. Calculate Monitoring Losses (reshape too)
             y_pred  = y_pred.reshape(len(u_p), training_dataset.nx, training_dataset.nx, 3)
-            y_pred=training_dataset.y_normalizer.transform(y_pred.to('cpu'),inverse=True)
+            y_pred=training_dataset.y_normalizer.transform(y_pred.to(device),inverse=True)
                                                                
             # Hard Enforce Boundaries
             if args['boundaries'] == 'hard': y_pred = hard_enforce_boundaries(y_pred)
 
             if not training_dataset.vertex and not training_dataset.boundaries:
                 Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_cell_non_dim(U=y_pred, 
-                                                                                       lid_velocity=g_u[0].to('cpu'), 
+                                                                                       lid_velocity=g_u[0].to(device), 
                                                                                        nu=0.01, 
                                                                                        L=0.1)
             elif training_dataset.vertex and training_dataset.boundaries:
                 Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=y_pred, 
-                                                                                       lid_velocity=g_u[0].to('cpu'), 
+                                                                                       lid_velocity=g_u[0].to(device), 
                                                                                        nu=0.01, 
                                                                                        L=0.1)
                 
@@ -227,7 +227,7 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
 
             #total_avg_pde_loss = torch.mean(torch.tensor([pde_l1, pde_l2, pde_l3], requires_grad=True))
             total_avg_pde_loss = (pde_l1 + pde_l2 + pde_l3)/3
-            total_weighted_loss = xy_weight*loss_total.to(device) + pde_weight*total_avg_pde_loss
+            total_weighted_loss = xy_weight*loss_total.to(device) + pde_weight*total_avg_pde_loss.to(device)
 
             pde_l1_list.append(pde_l1.item()/pde_weights[0].item())
             pde_l2_list.append(pde_l2.item()/pde_weights[1].item())
