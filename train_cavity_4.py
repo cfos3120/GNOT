@@ -52,9 +52,9 @@ class PDE_weights():
         self.device = device
 
         if self.type == 'dynamic':
-            self.w1 = torch.tensor(torch.FloatTensor([1]), requires_grad=True).to(self.device)
-            self.w2 = torch.tensor(torch.FloatTensor([1]), requires_grad=True).to(self.device)
-            self.w3 = torch.tensor(torch.FloatTensor([1]), requires_grad=True).to(self.device)
+            self.w1 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
+            self.w2 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
+            self.w3 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
             self.params = [self.w1, self.w2, self.w3]
             self.optimizer2 = torch.optim.Adam(self.params, lr=LR)
             self.Gradloss = torch.nn.L1Loss()
@@ -189,19 +189,19 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
             
             # 5.3. Calculate Monitoring Losses (reshape too)
             y_pred  = y_pred.reshape(len(u_p), training_dataset.nx, training_dataset.nx, 3)
-            y_pred=training_dataset.y_normalizer.transform(y_pred.to('cpu'),inverse=True).to(device)
+            y_pred=training_dataset.y_normalizer.transform(y_pred.to('cpu'),inverse=True)
                                                                
             # Hard Enforce Boundaries
             if args['boundaries'] == 'hard': y_pred = hard_enforce_boundaries(y_pred)
 
             if not training_dataset.vertex and not training_dataset.boundaries:
                 Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_cell_non_dim(U=y_pred, 
-                                                                                       lid_velocity=g_u[0].to(device), 
+                                                                                       lid_velocity=g_u[0].to('cpu'), 
                                                                                        nu=0.01, 
                                                                                        L=0.1)
             elif training_dataset.vertex and training_dataset.boundaries:
                 Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=y_pred, 
-                                                                                       lid_velocity=g_u[0].to(device), 
+                                                                                       lid_velocity=g_u[0].to('cpu'), 
                                                                                        nu=0.01, 
                                                                                        L=0.1)
                 
@@ -215,9 +215,9 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
 
             #Du_dx, Dv_dy, continuity_eq = torch.flatten(Du_dx), torch.flatten(Dv_dy), torch.flatten(continuity_eq)
                 
-            pde_l1 = pde_weights[0]*loss_function_no_graph(Du_dx, torch.zeros_like(Du_dx))#[0]
-            pde_l2 = pde_weights[1]*loss_function_no_graph(Dv_dy, torch.zeros_like(Dv_dy))#[0]
-            pde_l3 = pde_weights[2]*loss_function_no_graph(continuity_eq, torch.zeros_like(continuity_eq))#[0]
+            pde_l1 = pde_weights[0]*loss_function_no_graph(Du_dx, torch.zeros_like(Du_dx)).to(device)#[0]
+            pde_l2 = pde_weights[1]*loss_function_no_graph(Dv_dy, torch.zeros_like(Dv_dy)).to(device)#[0]
+            pde_l3 = pde_weights[2]*loss_function_no_graph(continuity_eq, torch.zeros_like(continuity_eq)).to(device)#[0]
             
             # pde_l1 = loss_function_no_graph(Du_dx, torch.zeros_like(Du_dx))
             # pde_l2 = loss_function_no_graph(Dv_dy, torch.zeros_like(Dv_dy))
