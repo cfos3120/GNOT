@@ -22,8 +22,8 @@ def console_printer(device, epoch, batch_n, batch_end_time,  batch_start_time, t
         print_end = '\n'
     else: print_end = '\r'
     
-    print_end = '\r'
-    print(f'Epoch: {epoch}, Batch: {batch_n + 1}, ' + \
+    print_end = ''
+    print(f'\r Epoch: {epoch}, Batch: {batch_n + 1}, ' + \
             f'Mean L2 Training Loss: {training_loss:.3f}, ' + \
             f'Mean L2 Validation Loss: {validation_loss}, ' + \
             f'Estimated Time Left {(batch_end_time - batch_start_time)*(epochs-epoch+1)*(len(training_dataloader)-batch_n+1)/3600:.2f}hrs ' + \
@@ -238,9 +238,7 @@ def model_training_routine(device, model, args, training_dataset, testing_datase
             #print(total_weighted_loss.item(), pde_l1.item(), pde_l2.item(), pde_l3.item(), pde_weights[0].item(), pde_weights[1].item(), pde_weights[2].item())
 
             # 5.4. Backwards Pass to Optimizing and Scheduling
-            print('help1')
             total_weighted_loss.backward(retain_graph=True)
-            print('help2')
             torch.nn.utils.clip_grad_norm_(model.parameters(), args['grad-clip'])
 
             pde_weights.calculate(model, model_layer=-1, l1=pde_l1, l2=pde_l2, l3=pde_l3)
