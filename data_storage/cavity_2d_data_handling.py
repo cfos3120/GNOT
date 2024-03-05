@@ -295,7 +295,7 @@ def NS_FDM_cavity_internal_cell_non_dim(U, lid_velocity, nu, L):
     
     return Du_dx, Dv_dy, continuity_eq, fdm_derivatives
 
-def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L):
+def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L, pressure_overide=False):
 
     # with boundary conditions
 
@@ -337,6 +337,9 @@ def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L):
     v = U[...,1]
     p = U[...,2]
 
+    if pressure_overide:
+        p = (u**2 + v**2)*1/2           #density is one
+        
     # gradients in internal zone
     uy  = (u[:, 2:  , 1:-1] -   u[:,  :-2, 1:-1]) / (2*dy)
     ux  = (u[:, 1:-1, 2:  ] -   u[:, 1:-1,  :-2]) / (2*dx)

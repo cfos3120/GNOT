@@ -123,7 +123,8 @@ if __name__ == '__main__':
     # Override any duplicate settings
     if training_args['fine_tuning']:
         if 'ckpt' not in training_args:
-            raise ValueError('Can not fine-tune without Checkpoint')
+            print('NOTE: NO CHECKPOINT LOADED')
+            #raise ValueError('Can not fine-tune without Checkpoint')
 
         training_args['xy_loss']            = 0.0
         training_args['batchsize']          = 1

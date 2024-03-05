@@ -10,8 +10,46 @@ from timeit import default_timer
 from data_storage.cavity_2d_data_handling import Cavity_2D_dataset_handling_v2, NS_FDM_cavity_internal_vertex_non_dim
 from models.cgpt import CGPTNO
 from data_utils import MIODataLoader, WeightedLpLoss
+from sklearn.metrics import r2_score
 
 colors = plotly.colors.qualitative.Plotly
+
+# Custom LpLoss
+class LpLoss(object):
+    '''
+    loss function with rel/abs Lp loss
+    '''
+    def __init__(self, p=2, size_average=True, reduction=True, relative=False):
+        super(LpLoss, self).__init__()
+
+        #Dimension and Lp-norm type are postive
+        assert p > 0
+
+        self.p = p
+        self.reduction = reduction
+        self.size_average = size_average
+        self.relative = relative
+
+    def rel(self, x, y):
+        num_examples = x.size()[0]
+
+        diff_norms = torch.norm(x.reshape(num_examples,-1) - y.reshape(num_examples,-1), self.p, 1)
+
+        if self.relative:
+            y_norms = torch.norm(y.reshape(num_examples,-1), self.p, 1)
+        else:
+            y_norms = 1
+
+        if self.reduction:
+            if self.size_average:
+                return torch.mean(diff_norms/y_norms)
+            else:
+                return torch.sum(diff_norms/y_norms)
+        
+        return diff_norms/y_norms
+
+    def __call__(self, x, y):
+        return self.rel(x, y)
 
 
 def reconstruct_dict(path):
@@ -341,14 +379,11 @@ def ansatz_vorticity_map(prediction, ground_truth, lid_v):
     fig.show()
     return fig
 
-def ansatz_magnitude(prediction, ground_truth, lid_v):
+def ansatz_magnitude(prediction, ground_truth, lid_v, stream_line_density=3, arrow_scale=0.002):
     batch = 0 
     
     line_grid = np.arange(prediction.shape[1])/(prediction.shape[1]-1)
     
-    arrow_scale = 0.002
-    stream_line_density = 3
-
     vel_mag_ground = np.sqrt(ground_truth[batch,:,:,0]**2 + ground_truth[batch,:,:,1]**2)
     vel_mag_ansatz = np.sqrt(prediction[batch,:,:,0]**2 + prediction[batch,:,:,1]**2)
     fig = make_subplots(rows=1,cols=4, subplot_titles=('Ground Truth', 'Ansatz', 'Difference'))
@@ -379,21 +414,56 @@ class cross_section_plots():
         self.fig['layout']['xaxis4']['title'], self.fig['layout']['yaxis4']['title'] = f'v(x={sample_point_location:.1f},y)', 'y'
         self.fig.update_layout(title_text = f"Cross-Sectional Velocity Distributions ({lid_v:.2f}m/s)")
 
-    def add_result(self, result, name, legend_group, colour_index, show_legend=True, mode = 'solid'):
+        # one dimension due to cross-section
+        self.LpLoss = LpLoss(size_average=False, reduction=False, relative=True)
+        self.l2_list = list()
+        self.r2_list = list()
+
+    def add_result(self, result, name, legend_group, colour_index, show_legend=True, mode = 'solid', baseline=False):
         
         sample_point_index = int(np.floor(result.shape[1]/2))
         line_grid = np.arange(result.shape[1])/(result.shape[1]-1)
 
-        U_h_cross = np.mean(result[0,sample_point_index:sample_point_index+2,:,0].detach().numpy(),axis=0)
-        U_v_cross = np.mean(result[0,:,sample_point_index:sample_point_index+2,0].detach().numpy(),axis=1)
-        V_h_cross = np.mean(result[0,sample_point_index:sample_point_index+2,:,1].detach().numpy(),axis=0)
-        V_v_cross = np.mean(result[0,:,sample_point_index:sample_point_index+2,1].detach().numpy(),axis=1)
+        # if vertex centred and boundaries present:
+        U_h_cross = result[0,sample_point_index,:,0].detach().numpy()
+        U_v_cross = result[0,:,sample_point_index,0].detach().numpy()
+        V_h_cross = result[0,sample_point_index,:,1].detach().numpy()
+        V_v_cross = result[0,:,sample_point_index,1].detach().numpy()
 
         self.fig.add_trace(go.Scatter(x = line_grid, y = U_h_cross, mode='lines', name=name, legendgroup=legend_group, showlegend=show_legend  , marker_color=colors[colour_index], line={'dash': mode, 'color': colors[colour_index]}),1,1)
         self.fig.add_trace(go.Scatter(x = U_v_cross, y = line_grid, mode='lines', name=name, legendgroup=legend_group, showlegend=False        , marker_color=colors[colour_index], line={'dash': mode, 'color': colors[colour_index]}),1,2)
         self.fig.add_trace(go.Scatter(x = line_grid, y = V_h_cross, mode='lines', name=name, legendgroup=legend_group, showlegend=False        , marker_color=colors[colour_index], line={'dash': mode, 'color': colors[colour_index]}),1,3)
         self.fig.add_trace(go.Scatter(x = V_v_cross, y = line_grid, mode='lines', name=name, legendgroup=legend_group, showlegend=False        , marker_color=colors[colour_index], line={'dash': mode, 'color': colors[colour_index]}),1,4)
 
+        # add L2 Scores:
+        if baseline:
+            self.U_h_cross_baseline = U_h_cross
+            self.U_v_cross_baseline = U_v_cross
+            self.V_h_cross_baseline = V_h_cross
+            self.V_v_cross_baseline = V_v_cross
+            self.l2_list.append({'U_h_cross':1, 'U_v_cross':1, 'V_h_cross':1, 'V_v_cross': 1})
+        elif len(U_h_cross) == len(self.U_h_cross_baseline):
+            U_h_cross_l2 = self.LpLoss(torch.tensor(U_h_cross).unsqueeze(0), torch.tensor(self.U_h_cross_baseline).unsqueeze(0)).item()
+            U_v_cross_l2 = self.LpLoss(torch.tensor(U_v_cross).unsqueeze(0), torch.tensor(self.U_v_cross_baseline).unsqueeze(0)).item()
+            V_h_cross_l2 = self.LpLoss(torch.tensor(V_h_cross).unsqueeze(0), torch.tensor(self.V_h_cross_baseline).unsqueeze(0)).item()
+            V_v_cross_l2 = self.LpLoss(torch.tensor(V_v_cross).unsqueeze(0), torch.tensor(self.V_v_cross_baseline).unsqueeze(0)).item()
+            self.l2_list.append({'U_h_cross':U_h_cross_l2, 'U_v_cross':U_v_cross_l2, 'V_h_cross':V_h_cross_l2, 'V_v_cross': V_v_cross_l2})
+        else:
+            self.l2_list.append({'U_h_cross':'Nan due to shape mismatch', 'U_v_cross':np.nan, 'V_h_cross':np.nan, 'V_v_cross': np.nan})
+
+
+        # add R2 Scores:
+        if baseline:
+            self.r2_list.append({'U_h_cross':1, 'U_v_cross':1, 'V_h_cross':1, 'V_v_cross': 1})
+        elif len(U_h_cross) == len(self.U_h_cross_baseline):
+            U_h_cross_r2 = r2_score(U_h_cross, self.U_h_cross_baseline)
+            U_v_cross_r2 = r2_score(U_v_cross, self.U_v_cross_baseline)
+            V_h_cross_r2 = r2_score(V_h_cross, self.V_h_cross_baseline)
+            V_v_cross_r2 = r2_score(V_v_cross, self.V_v_cross_baseline)
+            self.r2_list.append({'U_h_cross':U_h_cross_r2, 'U_v_cross':U_v_cross_r2, 'V_h_cross':V_h_cross_r2, 'V_v_cross': V_v_cross_r2})
+        else:
+            self.r2_list.append({'U_h_cross':'Nan due to shape mismatch', 'U_v_cross':np.nan, 'V_h_cross':np.nan, 'V_v_cross': np.nan})
+        
     def show(self):
         self.fig.show()
 
