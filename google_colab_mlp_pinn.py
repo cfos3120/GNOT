@@ -249,9 +249,9 @@ if __name__ == '__main__':
     for i in range(1):
         pinn.closure()
         pinn.adam.step()
-    pinn.lbfgs.step(pinn.closure)
+    #pinn.lbfgs.step(pinn.closure)
     torch.save(pinn.net.state_dict(), "model_weights.pt")
-    plotLoss(pinn.losses, "./Navier-Stokes/loss_curve.png")
+    plotLoss(pinn.losses)
 
     np.save('training_losses.npy',pinn.losses)
     
