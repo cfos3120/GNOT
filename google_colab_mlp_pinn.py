@@ -67,7 +67,7 @@ class PINN_cavity:
             lr=1.0,
             max_iter=50000,
             max_eval=50000,
-            tolerance_grad=1e-5,
+            tolerance_grad=1e-8, #1e-5, 
             tolerance_change=1.0 * np.finfo(float).eps,
             history_size=50,
             line_search_fn="strong_wolfe",
