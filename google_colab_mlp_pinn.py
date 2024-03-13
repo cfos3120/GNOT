@@ -250,6 +250,7 @@ if __name__ == '__main__':
     for i in range(10000):
         pinn.closure()
         pinn.adam.step()
+    torch.save(pinn.net.state_dict(), "model_weights_adam.pt")
     pinn.lbfgs.step(pinn.closure)
     torch.save(pinn.net.state_dict(), "model_weights.pt")
     plotLoss(pinn.losses)
