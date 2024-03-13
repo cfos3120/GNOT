@@ -60,7 +60,7 @@ class PINN_cavity:
     nu = 0.05
     Re = lid_velocity * L/nu
 
-    def __init__(self, ub, lb) -> None:
+    def __init__(self, ub, lb, Re=100) -> None:
         self.net = DNN(dim_in=2, dim_out=3, n_layer=4, n_node=40, ub=ub, lb=lb).to(device)
         self.lbfgs = torch.optim.LBFGS(
             self.net.parameters(),
@@ -222,6 +222,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='MLP PINN Training Study')
     parser.add_argument('--name', type=str, default='test')
+    parser.add_argument('--Re', type=float, default='test')
     args = parser.parse_args()
 
     x_min = 0.0
@@ -243,7 +244,7 @@ if __name__ == '__main__':
     N_r = 10000
 
     xy_col, xy_bnd, uv_bnd = getData_cavity(N_b,N_w,N_s,N_c,N_r)
-    pinn = PINN_cavity(ub=ub,lb=lb)
+    pinn = PINN_cavity(ub=ub,lb=lb,Re=args.Re)
 
     pinn.assign_dataset(xy_bnd, xy_col, uv_bnd)
     for i in range(10000):
