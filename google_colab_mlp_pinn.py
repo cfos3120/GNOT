@@ -127,13 +127,13 @@ class PINN_cavity:
 
         return mse_pde, mse_f0.detach().cpu().item(), mse_f1.detach().cpu().item(), mse_f2.detach().cpu().item()
 
-    def closure(self, xy_bnd, xy_col):
+    def closure(self):
         self.lbfgs.zero_grad()
         self.adam.zero_grad()
 
-        mse_bc = self.bc_loss(xy_bnd, uv_bnd)
+        mse_bc = self.bc_loss(self.xy_bnd, self.uv_bnd)
         #mse_outlet = self.outlet_loss(xy_outlet)
-        mse_pde, mse_f0, mse_f1, mse_f2 = self.pde_loss(xy_col)
+        mse_pde, mse_f0, mse_f1, mse_f2 = self.pde_loss(self.xy_col)
         #loss = mse_bc + mse_outlet + mse_pde
         loss = mse_bc + mse_pde
 
@@ -153,6 +153,13 @@ class PINN_cavity:
         if self.iter % 500 == 0:
             print("")
         return loss
+    
+    def assign_dataset(self,xy_bnd,xy_col,uv_bnd):
+        self.xy_bnd = xy_bnd
+        self.xy_col = xy_col
+        self.uv_bnd = uv_bnd
+
+
 
 def plotLoss(losses_dict, info=["BC", "PDE", "f0", "f1", "f2"]):
     fig, axes = plt.subplots(1, 5, sharex=True, sharey=True, figsize=(10, 6))
@@ -237,10 +244,12 @@ if __name__ == '__main__':
 
     xy_col, xy_bnd, uv_bnd = getData_cavity(N_b,N_w,N_s,N_c,N_r)
     pinn = PINN_cavity(ub=ub,lb=lb)
-    for i in range(10000):
-        pinn.closure(xy_bnd=xy_bnd,xy_col=xy_col)
+
+    pinn.assign_dataset(xy_bnd, xy_col, uv_bnd)
+    for i in range(1):
+        pinn.closure()
         pinn.adam.step()
-    pinn.lbfgs.step(pinn.closure(xy_bnd=xy_bnd,xy_col=xy_col))
+    pinn.lbfgs.step(pinn.closure)
     torch.save(pinn.net.state_dict(), "model_weights.pt")
     plotLoss(pinn.losses, "./Navier-Stokes/loss_curve.png")
 
