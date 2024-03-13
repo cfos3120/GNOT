@@ -246,7 +246,7 @@ if __name__ == '__main__':
     pinn = PINN_cavity(ub=ub,lb=lb)
 
     pinn.assign_dataset(xy_bnd, xy_col, uv_bnd)
-    for i in range(1):
+    for i in range(10000):
         pinn.closure()
         pinn.adam.step()
     #pinn.lbfgs.step(pinn.closure)
