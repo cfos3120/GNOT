@@ -253,7 +253,7 @@ if __name__ == '__main__':
     torch.save(pinn.net.state_dict(), "model_weights.pt")
     plotLoss(pinn.losses)
 
-    np.save('training_losses.npy',pinn.losses)
+    np.save('training_losses.npy',pinn.losses, allow_pickle=True)
     
-    shutil.copyfile('training_losses.npy'   , '/content/drive/MyDrive/Results/'+ args.name + '.pt')
-    shutil.copyfile("model_weights.pt"      , '/content/drive/MyDrive/Results/'+ args.name + '.npy')
+    shutil.copyfile('training_losses.npy'   , '/content/drive/MyDrive/Results/'+ args.name + '.npy')
+    shutil.copyfile("model_weights.pt"      , '/content/drive/MyDrive/Results/'+ args.name + '.pt')
