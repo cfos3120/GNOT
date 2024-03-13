@@ -257,5 +257,8 @@ if __name__ == '__main__':
 
     np.save('training_losses.npy',pinn.losses, allow_pickle=True)
     
-    shutil.copyfile('training_losses.npy'   , '/content/drive/MyDrive/Results/'+ args.name + '.npy')
-    shutil.copyfile("model_weights.pt"      , '/content/drive/MyDrive/Results/'+ args.name + '.pt')
+    try:
+        shutil.copyfile('training_losses.npy'   , '/content/drive/MyDrive/Results/'+ args.name + '.npy')
+        shutil.copyfile("model_weights.pt"      , '/content/drive/MyDrive/Results/'+ args.name + '.pt')
+    except ValueError:
+        pass
