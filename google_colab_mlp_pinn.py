@@ -55,19 +55,19 @@ class PINN_cavity:
     mu = 0.02
     
     # cavity
-    lid_velocity = 1
+    lid_velocity = 82
     L = 0.1
-    nu = 0.05
+    nu = 0.01
     Re = lid_velocity * L/nu
 
-    def __init__(self, ub, lb, Re=100) -> None:
+    def __init__(self, ub, lb) -> None:
         self.net = DNN(dim_in=2, dim_out=3, n_layer=4, n_node=40, ub=ub, lb=lb).to(device)
         self.lbfgs = torch.optim.LBFGS(
             self.net.parameters(),
             lr=1.0,
             max_iter=50000,
             max_eval=50000,
-            tolerance_grad=1e-8, #1e-5, 
+            tolerance_grad=1e-7, #1e-5, 
             tolerance_change=1.0 * np.finfo(float).eps,
             history_size=50,
             line_search_fn="strong_wolfe",
@@ -244,7 +244,7 @@ if __name__ == '__main__':
     N_r = 10000
 
     xy_col, xy_bnd, uv_bnd = getData_cavity(N_b,N_w,N_s,N_c,N_r)
-    pinn = PINN_cavity(ub=ub,lb=lb,Re=args.Re)
+    pinn = PINN_cavity(ub=ub,lb=lb)
 
     pinn.assign_dataset(xy_bnd, xy_col, uv_bnd)
     for i in range(10000):
@@ -253,7 +253,7 @@ if __name__ == '__main__':
     torch.save(pinn.net.state_dict(), "model_weights_adam.pt")
     pinn.lbfgs.step(pinn.closure)
     torch.save(pinn.net.state_dict(), "model_weights.pt")
-    plotLoss(pinn.losses)
+    #plotLoss(pinn.losses)
 
     np.save('training_losses.npy',pinn.losses, allow_pickle=True)
     
