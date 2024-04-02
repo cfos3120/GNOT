@@ -4,7 +4,7 @@ import math
 import numpy as np
 import torch
 import torch.nn as nn
-import dgl
+#import dgl
 from einops import repeat, rearrange
 from torch.nn import functional as F
 from torch.nn import GELU, ReLU, Tanh, Sigmoid
