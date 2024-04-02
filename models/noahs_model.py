@@ -1,14 +1,20 @@
 #!/usr/bin/env python
 #-*- coding:utf-8 _*-
+import math
+import numpy as np
 import torch
 import torch.nn as nn
 import dgl
-from einops import  rearrange
+from einops import repeat, rearrange
+from torch.nn import functional as F
 from torch.nn import GELU, ReLU, Tanh, Sigmoid
 from torch.nn.utils.rnn import pad_sequence
 
+
 from utils import MultipleTensors
 from models.mlp import MLP
+
+
 
 
 class GPTConfig():
@@ -28,6 +34,9 @@ class GPTConfig():
         self.n_inputs = n_inputs
 
 
+
+
+
 '''
     X: N*T*C --> N*(4*n + 3)*C 
 '''
@@ -39,6 +48,8 @@ def horizontal_fourier_embedding(X, n=3):
     X_sin = torch.sin(freqs * X_)
     X = torch.cat([X.unsqueeze(-1), X_cos, X_sin],dim=-1).view(X.shape[0],X.shape[1],-1)
     return X
+
+
 
 
 class LinearAttention(nn.Module):
@@ -103,6 +114,7 @@ class LinearAttention(nn.Module):
         return y
 
 
+
 class LinearCrossAttention(nn.Module):
     """
     A vanilla multi-head masked self-attention layer with a projection at the end.
@@ -151,7 +163,9 @@ class LinearCrossAttention(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         out = self.proj(out)
         return out
-    
+
+
+
 
 '''
     Self and Cross Attention block for CGPT, contains  a cross attention block and a self attention block
@@ -168,7 +182,7 @@ class CrossAttentionBlock(nn.Module):
 
         # self.ln6 = nn.LayerNorm(config.n_embd)      ## for ab study
         if config.attn_type == 'linear':
-            print('Using Linear Attention')
+            #print('Using Linear Attention')
             self.selfattn = LinearAttention(config)
             self.crossattn = LinearCrossAttention(config)
             # self.selfattn_branch = LinearAttention(config)
@@ -210,7 +224,10 @@ class CrossAttentionBlock(nn.Module):
         x = x + self.mlp2(self.ln5(x))
 
         return x
-    
+
+
+
+
 
 '''
     Cross Attention GPT neural operator
@@ -261,6 +278,7 @@ class CGPTNO(nn.Module):
         self.__name__ = 'CGPT'
 
 
+
     def _init_weights(self, module):
         if isinstance(module, (nn.Linear, nn.Embedding)):
             module.weight.data.normal_(mean=0.0, std=0.0002)
@@ -270,65 +288,6 @@ class CGPTNO(nn.Module):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    
-    # def forward(self, g, u_p, inputs):
-    #     gs = dgl.unbatch(g)
-    #     #print('gs', gs)
-    #     x = pad_sequence([_g.ndata['x'] for _g in gs]).permute(1, 0, 2)  # B, T1, F
-    #     #print('x padded shape', x.shape, 'u_p unsqueezed and repeated shape',  u_p.unsqueeze(1).repeat([1, x.shape[1], 1]).shape)
-    #     x = torch.cat([x, u_p.unsqueeze(1).repeat([1, x.shape[1], 1])], dim=-1)
-    #     #print('x shape after concat with theta', x.shape)
-    #     if self.horiz_fourier_dim > 0:
-    #         x = horizontal_fourier_embedding(x, self.horiz_fourier_dim)
-    #         # z = horizontal_fourier_embedding(z, self.horiz_fourier_dim)
-    #     x = self.trunk_mlp(x)
-    #     #print('x shape after trunk', x.shape)
-    #     if self.n_inputs:
-    #         z = MultipleTensors([self.branch_mlps[i](inputs[i]) for i in range(self.n_inputs)])
-    #     else:
-    #         z = MultipleTensors([x])
-        
-    #     #for i in z:
-    #         #print('z shape after trunk', i.shape)
-
-    #     for block in self.blocks:
-    #         x = block(x, z)
-        
-        
-    #     x = self.out_mlp(x)
-    #     x_out = torch.cat([x[i, :num] for i, num in enumerate(g.batch_num_nodes())],dim=0)
-    #     return x_out
-    
-    def forward(self, x, u_p, inputs):
-        
-        x = pad_sequence([x]).permute(1, 0, 2)  # B, T1, F
-        #x = torch.cat([x, u_p.unsqueeze(1).repeat([1, x.shape[1], 1])], dim=-1)
-        
-        #print('x shape after concat with theta', x.shape)
-        
-        if self.horiz_fourier_dim > 0:
-            x = horizontal_fourier_embedding(x, self.horiz_fourier_dim)
-            # z = horizontal_fourier_embedding(z, self.horiz_fourier_dim)
-        x = self.trunk_mlp(x)
-        #print('x shape after trunk', x.shape)
-        if self.n_inputs:
-            z = MultipleTensors([self.branch_mlps[i](inputs[i]) for i in range(self.n_inputs)])
-        else:
-            z = MultipleTensors([x])
-        
-        #for i in z:
-            #print('z shape after trunk', i.shape)
-
-        for block in self.blocks:
-            
-            x = block(x, z)
-        
-        
-        x = self.out_mlp(x)
-        print(x.shape)
-        #x_out = torch.cat([x[i, :num] for i, num in enumerate(g.batch_num_nodes())],dim=0)
-        return x
-    
     def configure_optimizers(self, lr=1e-3, betas=(0.9,0.999), weight_decay=0.00001, no_decay_extras=[]):
         """
         This long function is unfortunately doing something very simple and is being very defensive:
@@ -377,3 +336,107 @@ class CGPTNO(nn.Module):
         ]
         optimizer = torch.optim.AdamW(optim_groups, lr=lr, betas=betas)
         return optimizer
+
+    def forward(self, x, u_p=None, inputs=None):
+
+        #gs = dgl.unbatch(g)
+        #x = pad_sequence([_g.ndata['x'] for _g in gs]).permute(1, 0, 2)  # B, T1, F
+        if u_p is not None:
+            x = torch.cat([x, u_p.unsqueeze(1).repeat([1, x.shape[1], 1])], dim=-1)
+        if self.horiz_fourier_dim > 0:
+            x = horizontal_fourier_embedding(x, self.horiz_fourier_dim)
+            # z = horizontal_fourier_embedding(z, self.horiz_fourier_dim)
+        x = self.trunk_mlp(x)
+        if self.n_inputs:
+            z = MultipleTensors([self.branch_mlps[i](inputs) for i in range(self.n_inputs)])
+        else:
+            z = MultipleTensors([x])
+        for block in self.blocks:
+            #print(f'x.shape: {x.shape}, z.shape: {z[0].shape}')
+            x = block(x, z)
+        x = self.out_mlp(x)
+        #x_out = torch.cat([x[i, :num] for i, num in enumerate(g.batch_num_nodes())],dim=0)
+        
+
+
+
+        return x # x_out
+
+
+
+
+
+# class CGPT(nn.Module):
+#     def __init__(self,
+#                  trunk_size=2,
+#                  branch_sizes=None,
+#                  space_dim=2,
+#                  output_size=3,
+#                  n_layers=2,
+#                  n_hidden=64,
+#                  n_head=1,
+#                  n_experts = 2,
+#                  n_inner = 4,
+#                  mlp_layers=2,
+#                  attn_type='linear',
+#                  act = 'gelu',
+#                  ffn_dropout=0.0,
+#                  attn_dropout=0.0,
+#                  horiz_fourier_dim = 0,
+#                  ):
+#         super(CGPT, self).__init__()
+
+#         self.horiz_fourier_dim = horiz_fourier_dim
+#         self.trunk_size = trunk_size * (4*horiz_fourier_dim + 3) if horiz_fourier_dim>0 else trunk_size
+#         self.branch_sizes = [bsize * (4*horiz_fourier_dim + 3) for bsize in branch_sizes] if horiz_fourier_dim > 0 else branch_sizes
+#         self.n_inputs = len(self.branch_sizes)
+#         self.output_size = output_size
+#         self.space_dim = space_dim
+#         self.gpt_config = GPTConfig(attn_type=attn_type,embd_pdrop=ffn_dropout, resid_pdrop=ffn_dropout, attn_pdrop=attn_dropout,n_embd=n_hidden, n_head=n_head, n_layer=n_layers,
+#                                        block_size=128,act=act, branch_sizes=branch_sizes,n_inputs=len(branch_sizes),n_inner=n_inner)
+
+#         self.trunk_mlp = MLP(self.trunk_size, n_hidden, n_hidden, n_layers=mlp_layers,act=act)
+#         self.branch_mlps = nn.ModuleList([MLP(bsize, n_hidden, n_hidden, n_layers=mlp_layers,act=act) for bsize in self.branch_sizes])
+
+
+#         self.blocks = nn.Sequential(*[CrossAttentionBlock(self.gpt_config) for _ in range(self.gpt_config.n_layer)])
+
+#         self.out_mlp = MLP(n_hidden, n_hidden, output_size, n_layers=mlp_layers)
+
+#         # self.apply(self._init_weights)
+
+#         self.__name__ = 'MIOEGPT'
+
+
+
+#     def _init_weights(self, module):
+#         if isinstance(module, (nn.Linear, nn.Embedding)):
+#             module.weight.data.normal_(mean=0.0, std=0.0002)
+#             if isinstance(module, nn.Linear) and module.bias is not None:
+#                 module.bias.data.zero_()
+#         elif isinstance(module, nn.LayerNorm):
+#             module.bias.data.zero_()
+#             module.weight.data.fill_(1.0)
+
+
+
+#     def forward(self, g, u_p, inputs):
+#         gs = dgl.unbatch(g)
+#         x = pad_sequence([_g.ndata['x'] for _g in gs]).permute(1, 0, 2)  # B, T1, F
+
+
+#         x = torch.cat([x, u_p.unsqueeze(1).repeat([1, x.shape[1], 1])], dim=-1)
+
+#         # if self.horiz_fourier_dim > 0:
+#         #     x = horizontal_fourier_embedding(x, self.horiz_fourier_dim)
+#         #     z = horizontal_fourier_embedding(z, self.horiz_fourier_dim)
+
+#         x = self.trunk_mlp(x)
+#         z = MultipleTensors([self.branch_mlps[i](inputs[i]) for i in range(self.n_inputs)])
+
+#         for block in self.blocks:
+#             x = block(x, z)
+#         x = self.out_mlp(x)
+
+#         x_out = torch.cat([x[i, :num] for i, num in enumerate(g.batch_num_nodes())],dim=0)
+#         return x_out
