@@ -316,7 +316,7 @@ if __name__ == '__main__':
     training_run_results = total_model_dict(model_config=model_args, training_config=training_args, data_config=dataset_args)
 
     # queries are universal for all batches in this case
-    in_queries = dataset.X_for_queries.unsqueeze(0).float()#.requires_grad_(True)
+    in_queries = dataset.X_for_queries.unsqueeze(0).float().to(device)#.requires_grad_(True)
 
     for epoch in range(training_args['epochs']):
         epoch_start_time = default_timer()
