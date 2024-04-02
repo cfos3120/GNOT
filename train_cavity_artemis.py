@@ -209,6 +209,7 @@ if __name__ == '__main__':
     parser.add_argument('--name', type=str, default='test')
     parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
     parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--sub_x', type=int, default=4)
     
     args = parser.parse_args()
 
@@ -225,7 +226,7 @@ if __name__ == '__main__':
     dataset_args['normalize_x']             = 'unit'
     dataset_args['cell to pointwise']       = True
     dataset_args['add boundaries']          = True
-    dataset_args['sub_x']                   = 4
+    dataset_args['sub_x']                   = args.sub_x
 
     dataset = Cavity_2D_dataset_for_GNOT(data_path=dataset_args['file'], 
                                         L=1.0, 
