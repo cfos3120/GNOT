@@ -336,7 +336,7 @@ if __name__ == '__main__':
 
         # Initialize loss storage per epoch
         loss_total_list             = list()
-
+        
         batch_average_loss = 0
         for batch_n in range(dataset.data_out.shape[0]):
             
@@ -346,8 +346,6 @@ if __name__ == '__main__':
             out_truth   = dataset.data_out[batch_n,...].clone().float().to(device)
 
             if args.theta:
-                print('print state 1 ', dataset.data_lid_v[batch_n].clone().reshape(1,1).shape)
-                print('print state 2 ', in_queries.shape)
                 in_keys = dataset.data_lid_v[batch_n].clone().reshape(1,1).float().to(device)
                 out = model(x=in_queries,u_p = in_keys)
             else:
@@ -357,14 +355,18 @@ if __name__ == '__main__':
             loss = loss_f(out.reshape(65,65,3),out_truth)
             batch_average_loss += loss
 
+            # Sudo implementation of batch training of 4 samples
+            if batch_n+1 % 4 == 0 or batch_n+1 == dataset.data_out.shape[0]: 
+                batch_average_loss = batch_average_loss/(batch_n+1)
+                batch_average_loss.backward()#(retain_graph=True)
+
+                torch.nn.utils.clip_grad_norm_(model.parameters(), training_args['grad-clip'])
+                optimizer.step()
+                scheduler.step()
+                
+                batch_average_loss = 0
+            
             if training_args['epochs'] == 1: break
-
-        batch_average_loss = batch_average_loss/(batch_n+1)
-        batch_average_loss.backward()#(retain_graph=True)
-
-        torch.nn.utils.clip_grad_norm_(model.parameters(), training_args['grad-clip'])
-        optimizer.step()
-        scheduler.step()
 
         epoch_end_time = default_timer()
         training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
