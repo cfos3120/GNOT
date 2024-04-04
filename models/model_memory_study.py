@@ -20,7 +20,7 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 def check_cuda_memory(device,status_line):
     print(status_line)
     if torch.cuda.is_available():
-        print(f"    Allocated GPU Memory: {torch.cuda.memory_allocated(device) / 1024**3:.2f} GB" + f"Cached GPU Memory: {torch.cuda.memory_cached(device) / 1024**3:.2f} GB")
+        print(f"    Allocated GPU Memory: {torch.cuda.memory_allocated(device) / 1024**3:.2f} GB, " + f"Cached GPU Memory: {torch.cuda.memory_reserved(device) / 1024**3:.2f} GB")
 
 class GPTConfig():
     """ base GPT config, params common to all GPT versions """

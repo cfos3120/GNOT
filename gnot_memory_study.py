@@ -71,7 +71,7 @@ if __name__ == '__main__':
     x_2 = torch.rand([1,args.res**2,3])
     y = torch.rand([1,1])
     loss_f = torch.nn.MSELoss(reduction='mean')
-    
+    model.train()
     for epoch in range(2):
         print(f'EPOCH: {epoch}')
         if args.theta:
@@ -81,6 +81,6 @@ if __name__ == '__main__':
 
         check_cuda_memory(device, status_line='After model Output now backwards pass')
 
-        loss = loss_f(out,x_2)
+        loss = loss_f(out,x_2.to(device))
         loss.backward()
         check_cuda_memory(device, status_line='After Backwards pass')
