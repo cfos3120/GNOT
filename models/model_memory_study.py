@@ -10,12 +10,16 @@ from torch.nn import functional as F
 from torch.nn import GELU, ReLU, Tanh, Sigmoid
 from torch.nn.utils.rnn import pad_sequence
 
+import argparse
+
 
 from utils import MultipleTensors
 from models.mlp import MLP
 
-
-
+def check_cuda_memory(device,status_line):
+    print(status_line)
+    if torch.cuda.is_available():
+        print(f"    Allocated GPU Memory: {torch.cuda.memory_allocated(device) / 1024**3:.2f} GB" + f"Cached GPU Memory: {torch.cuda.memory_cached(device) / 1024**3:.2f} GB")
 
 class GPTConfig():
     """ base GPT config, params common to all GPT versions """
@@ -33,10 +37,6 @@ class GPTConfig():
         self.branch_sizes = branch_sizes
         self.n_inputs = n_inputs
 
-
-
-
-
 '''
     X: N*T*C --> N*(4*n + 3)*C 
 '''
@@ -48,9 +48,6 @@ def horizontal_fourier_embedding(X, n=3):
     X_sin = torch.sin(freqs * X_)
     X = torch.cat([X.unsqueeze(-1), X_cos, X_sin],dim=-1).view(X.shape[0],X.shape[1],-1)
     return X
-
-
-
 
 class LinearAttention(nn.Module):
     """
@@ -219,16 +216,16 @@ class CrossAttentionBlock(nn.Module):
 
 
     def forward(self, x, y):
+        check_cuda_memory(device,'Before Cross Attention')
         x = x + self.resid_drop1(self.crossattn(self.ln1(x), self.ln_branchs(y)))
+        check_cuda_memory(device,'After Cross Attention')
         x = x + self.mlp1(self.ln3(x))
+        check_cuda_memory(device,'After Linear')
         x = x + self.resid_drop2(self.selfattn(self.ln4(x)))
+        check_cuda_memory(device,'After Attention')
         x = x + self.mlp2(self.ln5(x))
-
+        check_cuda_memory(device,'After Linear')
         return x
-
-
-
-
 
 '''
     Cross Attention GPT neural operator
@@ -359,82 +356,64 @@ class CGPTNO(nn.Module):
         #x_out = torch.cat([x[i, :num] for i, num in enumerate(g.batch_num_nodes())],dim=0)
         
         return x # x_out
+    
 
+if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description='GNOT MODEL MEMORY STUDY')
+    parser.add_argument('--res', type=int, default=4)
+    parser.add_argument('--theta', type=bool, default=True)
+    parser.add_argument('--n_layers', type=int, default=3)
+    parser.add_argument('--n_hidden', type=int, default=64)
+    
+    args = parser.parse_args()
+    
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    if torch.cuda.is_available():
+        print(f"Using GPU: {torch.cuda.get_device_name(device)}")
+        print(f"Total GPU Memory: {torch.cuda.get_device_properties(device).total_memory / 1024**3:.2f} GB")
 
+    # 2. Construct Model
+    model_args = dict()
+    model_args['trunk_size']        = 3
+    model_args['theta_size']        = 0
+    model_args['branch_sizes']      = [1]
 
+    model_args['output_size']         = 3
+    model_args['n_layers']            = 3
+    model_args['n_hidden']            = 64 #128  
+    model_args['n_head']              = 1
+    model_args['attn_type']           = 'linear'
+    model_args['ffn_dropout']         = 0.0
+    model_args['attn_dropout']        = 0.0
+    model_args['mlp_layers']          = 2
+    model_args['act']                 = 'gelu'
+    model_args['hfourier_dim']        = 0
 
-# class CGPT(nn.Module):
-#     def __init__(self,
-#                  trunk_size=2,
-#                  branch_sizes=None,
-#                  space_dim=2,
-#                  output_size=3,
-#                  n_layers=2,
-#                  n_hidden=64,
-#                  n_head=1,
-#                  n_experts = 2,
-#                  n_inner = 4,
-#                  mlp_layers=2,
-#                  attn_type='linear',
-#                  act = 'gelu',
-#                  ffn_dropout=0.0,
-#                  attn_dropout=0.0,
-#                  horiz_fourier_dim = 0,
-#                  ):
-#         super(CGPT, self).__init__()
+    model = None
+    model = CGPTNO(
+                trunk_size          = model_args['trunk_size'] + model_args['theta_size'],
+                branch_sizes        = model_args['branch_sizes'],     # No input function means no branches
+                output_size         = model_args['output_size'],
+                n_layers            = model_args['n_layers'],
+                n_hidden            = model_args['n_hidden'],
+                n_head              = model_args['n_head'],
+                attn_type           = model_args['attn_type'],
+                ffn_dropout         = model_args['ffn_dropout'],
+                attn_dropout        = model_args['attn_dropout'],
+                mlp_layers          = model_args['mlp_layers'],
+                act                 = model_args['act'],
+                horiz_fourier_dim   = model_args['hfourier_dim']
+                ).to(device)
+    
+    check_cuda_memory(device)
 
-#         self.horiz_fourier_dim = horiz_fourier_dim
-#         self.trunk_size = trunk_size * (4*horiz_fourier_dim + 3) if horiz_fourier_dim>0 else trunk_size
-#         self.branch_sizes = [bsize * (4*horiz_fourier_dim + 3) for bsize in branch_sizes] if horiz_fourier_dim > 0 else branch_sizes
-#         self.n_inputs = len(self.branch_sizes)
-#         self.output_size = output_size
-#         self.space_dim = space_dim
-#         self.gpt_config = GPTConfig(attn_type=attn_type,embd_pdrop=ffn_dropout, resid_pdrop=ffn_dropout, attn_pdrop=attn_dropout,n_embd=n_hidden, n_head=n_head, n_layer=n_layers,
-#                                        block_size=128,act=act, branch_sizes=branch_sizes,n_inputs=len(branch_sizes),n_inner=n_inner)
+    x = torch.rand([1,10,2])
+    y = torch.rand([1,1])
 
-#         self.trunk_mlp = MLP(self.trunk_size, n_hidden, n_hidden, n_layers=mlp_layers,act=act)
-#         self.branch_mlps = nn.ModuleList([MLP(bsize, n_hidden, n_hidden, n_layers=mlp_layers,act=act) for bsize in self.branch_sizes])
+    if args.theta:
+        out = model(x=x.clone().float().to(device),u_p = y.clone().float().to(device))
+    else:
+        out = model(x=x.clone().float().to(device),inputs = y.clone().float().to(device))
 
-
-#         self.blocks = nn.Sequential(*[CrossAttentionBlock(self.gpt_config) for _ in range(self.gpt_config.n_layer)])
-
-#         self.out_mlp = MLP(n_hidden, n_hidden, output_size, n_layers=mlp_layers)
-
-#         # self.apply(self._init_weights)
-
-#         self.__name__ = 'MIOEGPT'
-
-
-
-#     def _init_weights(self, module):
-#         if isinstance(module, (nn.Linear, nn.Embedding)):
-#             module.weight.data.normal_(mean=0.0, std=0.0002)
-#             if isinstance(module, nn.Linear) and module.bias is not None:
-#                 module.bias.data.zero_()
-#         elif isinstance(module, nn.LayerNorm):
-#             module.bias.data.zero_()
-#             module.weight.data.fill_(1.0)
-
-
-
-#     def forward(self, g, u_p, inputs):
-#         gs = dgl.unbatch(g)
-#         x = pad_sequence([_g.ndata['x'] for _g in gs]).permute(1, 0, 2)  # B, T1, F
-
-
-#         x = torch.cat([x, u_p.unsqueeze(1).repeat([1, x.shape[1], 1])], dim=-1)
-
-#         # if self.horiz_fourier_dim > 0:
-#         #     x = horizontal_fourier_embedding(x, self.horiz_fourier_dim)
-#         #     z = horizontal_fourier_embedding(z, self.horiz_fourier_dim)
-
-#         x = self.trunk_mlp(x)
-#         z = MultipleTensors([self.branch_mlps[i](inputs[i]) for i in range(self.n_inputs)])
-
-#         for block in self.blocks:
-#             x = block(x, z)
-#         x = self.out_mlp(x)
-
-#         x_out = torch.cat([x[i, :num] for i, num in enumerate(g.batch_num_nodes())],dim=0)
-#         return x_out
+    

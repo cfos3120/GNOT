@@ -63,8 +63,11 @@ class Cavity_2D_dataset_for_GNOT():
         self.data_split = train_ratio
         self.inference = inference
 
-    def process(self):
+    def process(self,theta=False):
         
+        # Should the input function be self-referenced (theta) or cross-referenced?
+        self.theta = theta
+
         # SECTION 0: Split into train or test (Same as for FNO training)
         train_size = int(self.data_split * self.n_batches)
         test_size = self.n_batches - train_size
@@ -85,8 +88,6 @@ class Cavity_2D_dataset_for_GNOT():
         else:
             train_dataset,  test_dataset    = torch.from_numpy(self.data_out[:train_size,...]), torch.from_numpy(self.data_out[train_size:,...])
             train_lid_v,    test_lid_v      = torch.from_numpy(self.data_lid_v[:test_size,...]), torch.from_numpy(self.data_lid_v[test_size:,...])
-
-        
 
         if self.train:
             self.data_out   = train_dataset
@@ -168,12 +169,19 @@ class Cavity_2D_dataset_for_GNOT():
                 raise NotImplementedError
 
     def __update_dataset_config(self):
+        
+        if self.theta:
+            branch_sizes = None
+            theta_dim = 1
+        else:
+            branch_sizes = [1]
+            theta_dim = 0
 
         self.config = {
             'input_dim': self.X_for_queries.shape[-1],
-            #'theta_dim': self.data_lid_v.shape[1],
+            'theta_dim': theta_dim,
             'output_dim': self.data_out.shape[-1],
-            'branch_sizes': [1]
+            'branch_sizes': branch_sizes
         }
 
 class UnitTransformer():
@@ -210,6 +218,7 @@ if __name__ == '__main__':
     parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
     parser.add_argument('--epochs', type=int, default=1)
     parser.add_argument('--sub_x', type=int, default=4)
+    parser.add_argument('--theta', type=bool, default=True)
     
     args = parser.parse_args()
 
@@ -244,13 +253,13 @@ if __name__ == '__main__':
     dataset.assign_data_split_type(inference=dataset_args['Interpolate (instead of Extrapolate)'], 
                                    train_ratio=dataset_args['percent split (decimal)'], 
                                    seed=dataset_args['randomizer seed'])
-    dataset.process()
+    dataset.process(theta=args.theta)
 
     
 
     # 2. Construct Model
     model_args['trunk_size']        = dataset.config['input_dim']
-    #model_args['theta_size']        = data.config['theta_dim']
+    model_args['theta_size']        = dataset.config['theta_dim']
     model_args['branch_sizes']      = dataset.config['branch_sizes'] 
 
     model_args['output_size']         = 3
@@ -266,7 +275,7 @@ if __name__ == '__main__':
 
     model = None
     model = CGPTNO(
-                trunk_size          = model_args['trunk_size'],# + model_args['theta_size'],
+                trunk_size          = model_args['trunk_size'] + model_args['theta_size'],
                 branch_sizes        = model_args['branch_sizes'],     # No input function means no branches
                 output_size         = model_args['output_size'],
                 n_layers            = model_args['n_layers'],
@@ -332,11 +341,15 @@ if __name__ == '__main__':
         for batch_n in range(dataset.data_out.shape[0]):
             optimizer.zero_grad()
 
-            in_keys     = dataset.data_lid_v[batch_n].clone().reshape(1,1,1).float().to(device)
             out_truth   = dataset.data_out[batch_n,...].clone().float().to(device)
 
-            out = model(x=in_queries,inputs = in_keys)
-
+            if args.theta:
+                in_keys = dataset.data_lid_v[batch_n].clone().reshape(1,1).float().to(device)
+                out = model(x=in_queries,u_p = in_keys)
+            else:
+                in_keys = dataset.data_lid_v[batch_n].clone().reshape(1,1,1).float().to(device)
+                out = model(x=in_queries,inputs = in_keys)
+                
             loss = loss_f(out.reshape(65,65,3),out_truth)
             batch_average_loss += loss
 
