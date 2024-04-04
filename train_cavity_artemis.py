@@ -254,8 +254,8 @@ if __name__ == '__main__':
     model_args['branch_sizes']      = dataset.config['branch_sizes'] 
 
     model_args['output_size']         = 3
-    model_args['n_layers']            = 2 #3
-    model_args['n_hidden']            = 128  
+    model_args['n_layers']            = 3
+    model_args['n_hidden']            = 64 #128  
     model_args['n_head']              = 1
     model_args['attn_type']           = 'linear'
     model_args['ffn_dropout']         = 0.0
