@@ -16,6 +16,7 @@ import argparse
 from utils import MultipleTensors
 from models.mlp import MLP
 
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 def check_cuda_memory(device,status_line):
     print(status_line)
     if torch.cuda.is_available():
@@ -358,62 +359,6 @@ class CGPTNO(nn.Module):
         return x # x_out
     
 
-if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='GNOT MODEL MEMORY STUDY')
-    parser.add_argument('--res', type=int, default=4)
-    parser.add_argument('--theta', type=bool, default=True)
-    parser.add_argument('--n_layers', type=int, default=3)
-    parser.add_argument('--n_hidden', type=int, default=64)
-    
-    args = parser.parse_args()
-    
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    if torch.cuda.is_available():
-        print(f"Using GPU: {torch.cuda.get_device_name(device)}")
-        print(f"Total GPU Memory: {torch.cuda.get_device_properties(device).total_memory / 1024**3:.2f} GB")
-
-    # 2. Construct Model
-    model_args = dict()
-    model_args['trunk_size']        = 3
-    model_args['theta_size']        = 0
-    model_args['branch_sizes']      = [1]
-
-    model_args['output_size']         = 3
-    model_args['n_layers']            = 3
-    model_args['n_hidden']            = 64 #128  
-    model_args['n_head']              = 1
-    model_args['attn_type']           = 'linear'
-    model_args['ffn_dropout']         = 0.0
-    model_args['attn_dropout']        = 0.0
-    model_args['mlp_layers']          = 2
-    model_args['act']                 = 'gelu'
-    model_args['hfourier_dim']        = 0
-
-    model = None
-    model = CGPTNO(
-                trunk_size          = model_args['trunk_size'] + model_args['theta_size'],
-                branch_sizes        = model_args['branch_sizes'],     # No input function means no branches
-                output_size         = model_args['output_size'],
-                n_layers            = model_args['n_layers'],
-                n_hidden            = model_args['n_hidden'],
-                n_head              = model_args['n_head'],
-                attn_type           = model_args['attn_type'],
-                ffn_dropout         = model_args['ffn_dropout'],
-                attn_dropout        = model_args['attn_dropout'],
-                mlp_layers          = model_args['mlp_layers'],
-                act                 = model_args['act'],
-                horiz_fourier_dim   = model_args['hfourier_dim']
-                ).to(device)
-    
-    check_cuda_memory(device)
-
-    x = torch.rand([1,10,2])
-    y = torch.rand([1,1])
-
-    if args.theta:
-        out = model(x=x.clone().float().to(device),u_p = y.clone().float().to(device))
-    else:
-        out = model(x=x.clone().float().to(device),inputs = y.clone().float().to(device))
 
     

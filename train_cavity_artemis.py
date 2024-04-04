@@ -344,6 +344,8 @@ if __name__ == '__main__':
             out_truth   = dataset.data_out[batch_n,...].clone().float().to(device)
 
             if args.theta:
+                print('print state 1 ', dataset.data_lid_v[batch_n].clone().reshape(1,1).shape)
+                print('print state 2 ', in_queries.shape)
                 in_keys = dataset.data_lid_v[batch_n].clone().reshape(1,1).float().to(device)
                 out = model(x=in_queries,u_p = in_keys)
             else:
