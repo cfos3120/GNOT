@@ -340,7 +340,7 @@ if __name__ == '__main__':
         batch_average_loss = 0
         for batch_n in range(dataset.data_out.shape[0]):
             
-            print(f'Epoch: {epoch} Batch: {batch_n} Memory Allocated: {torch.cuda.memory_allocated(device) / 1024**3:.2f}GB Memory Cached: {torch.cuda.memory_reservedadded(device) / 1024**3:.2f}GB')
+            print(f'Epoch: {epoch} Batch: {batch_n} Memory Allocated: {torch.cuda.memory_allocated(device) / 1024**3:.2f}GB Memory Cached: {torch.cuda.memory_reserved(device) / 1024**3:.2f}GB')
             optimizer.zero_grad()
 
             out_truth   = dataset.data_out[batch_n,...].clone().float().to(device)
