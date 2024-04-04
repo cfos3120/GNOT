@@ -328,6 +328,7 @@ if __name__ == '__main__':
     in_queries = dataset.X_for_queries.unsqueeze(0).float().to(device)#.requires_grad_(True)
 
     for epoch in range(training_args['epochs']):
+        print(epoch)
         epoch_start_time = default_timer()
 
         # Set Model to Train
