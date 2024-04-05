@@ -232,6 +232,18 @@ class CavityDataset(Dataset):
 
         return in_queries, in_keys, out_truth
     
+class custom_l2_loss(object):
+    def __init__(self):
+        super(custom_l2_loss, self).__init__()
+        self.p = 2
+    
+    def __call__(self, x, y):
+        batches = x.shape[0]
+        num_nodes = x.shape[1]
+        #losses = ((1/num_nodes)*(pred - target).abs() ** p)) ** (1 / p)
+
+        return torch.mean(torch.norm(x.reshape(batches,-1) - y.reshape(batches,-1), self.p, 1))
+    
 if __name__ == '__main__': 
     
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -326,7 +338,8 @@ if __name__ == '__main__':
     dataset = CavityDataset(dataset=dataset)
     train_dataloader = DataLoader(dataset, batch_size=training_args['batchsize'], shuffle=True)  
 
-    loss_f = torch.nn.MSELoss(reduction='mean')
+    #loss_f = torch.nn.MSELoss(reduction='sum')
+    loss_f = custom_l2_loss()
     optimizer = torch.optim.AdamW(model.parameters(), 
                                   betas=(0.9, 0.999), 
                                   lr=training_args['base_lr'],
@@ -368,18 +381,19 @@ if __name__ == '__main__':
             loss = loss_f(out.reshape(training_args['batchsize'],65,65,3),out_truth)
 
             loss.backward()#(retain_graph=True)
-            print(f'Epoch: {epoch :8} Batch: {batch_n :3} L2 Loss: {loss :12.7f}, Memory Allocated: GPU1 {torch.cuda.memory_allocated(torch.device("cuda:0")) / 1024**3:5.2f}GB ' + 
-                  f'GPU2 {torch.cuda.memory_allocated(torch.device("cuda:0")) / 1024**3:5.2f}GB ' +
-                  f'Memory Cached: GPU1 {torch.cuda.memory_reserved("cuda:1") / 1024**3:5.2f}GB ' +
-                  f'GPU2 {torch.cuda.memory_reserved("cuda:1") / 1024**3:5.2f}GB '
-                  )
-
+        
             torch.nn.utils.clip_grad_norm_(model.parameters(), training_args['grad-clip'])
             optimizer.step()
             scheduler.step()
             
-            #if training_args['epochs'] == 1: break
+            if training_args['epochs'] == 1: break
 
+        print(f'Epoch: {epoch :8} Batch: {batch_n :3} L2 Loss: {loss :12.7f}, Memory Allocated: GPU1 {torch.cuda.memory_allocated(torch.device("cuda:0")) / 1024**3:5.2f}GB ' + 
+                  f'GPU2 {torch.cuda.memory_allocated(torch.device("cuda:0")) / 1024**3:5.2f}GB ' +
+                  f'Memory Cached: GPU1 {torch.cuda.memory_reserved("cuda:1") / 1024**3:5.2f}GB ' +
+                  f'GPU2 {torch.cuda.memory_reserved("cuda:1") / 1024**3:5.2f}GB '
+                  )
+        
         epoch_end_time = default_timer()
         training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
         training_run_results.update_loss({'Training L2 Loss': loss.item()})

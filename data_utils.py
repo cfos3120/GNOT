@@ -551,7 +551,7 @@ class WeightedLpLoss(_WeightedLoss):
         self.component = component if component == 'all' else int(component)
         self.regularizer = regularizer
         self.normalizer = normalizer
-        self.avg_pool = AvgPooling()
+        self.avg_pool = AvgPooling() #r^{(i)} = \frac{1}{N_i}\sum_{k=1}^{N_i} x^{(i)}_k
 
     def _lp_losses(self, g, pred, target):
         if self.component == 'all':
