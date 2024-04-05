@@ -438,8 +438,8 @@ if __name__ == '__main__':
             if training_args['epochs'] == 10: break
 
         print(f'Epoch: {epoch :8} Batch: {batch_n :3} L2 Loss: {loss :12.7f}, Memory Allocated: GPU1 {torch.cuda.memory_allocated(torch.device("cuda:0")) / 1024**3:5.2f}GB ' + 
-                  f'GPU2 {torch.cuda.memory_allocated(torch.device("cuda:0")) / 1024**3:5.2f}GB ' +
-                  f'Memory Cached: GPU1 {torch.cuda.memory_reserved("cuda:1") / 1024**3:5.2f}GB ' +
+                  f'GPU2 {torch.cuda.memory_allocated(torch.device("cuda:1")) / 1024**3:5.2f}GB ' +
+                  f'Memory Cached: GPU1 {torch.cuda.memory_reserved("cuda:0") / 1024**3:5.2f}GB ' +
                   f'GPU2 {torch.cuda.memory_reserved("cuda:1") / 1024**3:5.2f}GB '
                   )
         
