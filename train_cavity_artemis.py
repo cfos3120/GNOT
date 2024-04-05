@@ -223,7 +223,7 @@ class CavityDataset(Dataset):
     def __getitem__(self, idx):
         in_queries  = self.in_queries.float()
         in_keys     = self.in_keys_all[idx].float()
-        out_truth   = self.out_truth_all[idx,...].float()
+        out_truth   = self.out_truth_all.reshape(self.out_truth_all.shape[0],self.out_truth_all.shape[1]**2,3)[idx,...].float()
         
         if self.theta:
             in_keys = in_keys.reshape(1)
@@ -243,7 +243,55 @@ class custom_l2_loss(object):
         #losses = ((1/num_nodes)*(pred - target).abs() ** p)) ** (1 / p)
 
         return torch.mean(torch.norm(x.reshape(batches,-1) - y.reshape(batches,-1), self.p, 1))
-    
+
+class LpLoss(object):
+    '''
+    loss function with rel/abs Lp loss
+    '''
+    def __init__(self, d=2, p=2, size_average=True, reduction=True):
+        super(LpLoss, self).__init__()
+
+        #Dimension and Lp-norm type are postive
+        assert d > 0 and p > 0
+
+        self.d = d
+        self.p = p
+        self.reduction = reduction
+        self.size_average = size_average
+
+    def abs(self, x, y):
+        num_examples = x.size()[0]
+
+        #Assume uniform mesh
+        h = 1.0 / (x.size()[1] - 1.0)
+
+        all_norms = (h**(self.d/self.p))*torch.norm(x.reshape(num_examples,-1) - y.reshape(num_examples,-1), self.p, 1)
+
+        if self.reduction:
+            if self.size_average:
+                return torch.mean(all_norms)
+            else:
+                return torch.sum(all_norms)
+
+        return all_norms
+
+    def rel(self, x, y):
+        num_examples = x.size()[0]
+
+        diff_norms = torch.norm(x.reshape(num_examples,-1) - y.reshape(num_examples,-1), self.p, 1)
+        y_norms = torch.norm(y.reshape(num_examples,-1), self.p, 1)
+
+        if self.reduction:
+            if self.size_average:
+                return torch.mean(diff_norms/y_norms)
+            else:
+                return torch.sum(diff_norms/y_norms)
+
+        return diff_norms/y_norms
+
+    def __call__(self, x, y):
+        return self.rel(x, y)
+       
 if __name__ == '__main__': 
     
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -339,7 +387,8 @@ if __name__ == '__main__':
     train_dataloader = DataLoader(dataset, batch_size=training_args['batchsize'], shuffle=True)  
 
     #loss_f = torch.nn.MSELoss(reduction='sum')
-    loss_f = custom_l2_loss()
+    #loss_f = custom_l2_loss()
+    loss_f = LpLoss()
     optimizer = torch.optim.AdamW(model.parameters(), 
                                   betas=(0.9, 0.999), 
                                   lr=training_args['base_lr'],
@@ -378,7 +427,7 @@ if __name__ == '__main__':
             else:
                 out = model(x=in_queries,inputs = in_keys)
                 
-            loss = loss_f(out.reshape(training_args['batchsize'],65,65,3),out_truth)
+            loss = loss_f(out,out_truth)
 
             loss.backward()#(retain_graph=True)
         
@@ -386,7 +435,7 @@ if __name__ == '__main__':
             optimizer.step()
             scheduler.step()
             
-            if training_args['epochs'] == 1: break
+            if training_args['epochs'] == 10: break
 
         print(f'Epoch: {epoch :8} Batch: {batch_n :3} L2 Loss: {loss :12.7f}, Memory Allocated: GPU1 {torch.cuda.memory_allocated(torch.device("cuda:0")) / 1024**3:5.2f}GB ' + 
                   f'GPU2 {torch.cuda.memory_allocated(torch.device("cuda:0")) / 1024**3:5.2f}GB ' +
