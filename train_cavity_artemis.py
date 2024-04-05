@@ -4,6 +4,7 @@ import numpy as np
 
 import torch
 import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
 
 from timeit import default_timer
 
@@ -209,6 +210,28 @@ class UnitTransformer():
             else:
                 return (X - self.mean[:,component])/self.std[:,component]
 
+class CavityDataset(Dataset):
+    def __init__(self,dataset,theta=True):
+        self.theta = theta
+        self.in_queries = dataset.X_for_queries
+        self.in_keys_all = dataset.data_lid_v
+        self.out_truth_all = dataset.data_out
+
+    def __len__(self):
+        return len(self.in_keys_all)
+
+    def __getitem__(self, idx):
+        in_queries  = self.in_queries.float()
+        in_keys     = self.in_keys_all[idx].float()
+        out_truth   = self.out_truth_all[idx,...].float()
+        
+        if self.theta:
+            in_keys = in_keys.reshape(1)
+        else:
+            in_keys = in_keys.reshape(1,1)
+
+        return in_queries, in_keys, out_truth
+    
 if __name__ == '__main__': 
     
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -255,8 +278,6 @@ if __name__ == '__main__':
                                    seed=dataset_args['randomizer seed'])
     dataset.process(theta=args.theta)
 
-    
-
     # 2. Construct Model
     model_args['trunk_size']        = dataset.config['input_dim']
     model_args['theta_size']        = dataset.config['theta_dim']
@@ -273,8 +294,8 @@ if __name__ == '__main__':
     model_args['act']                 = 'gelu'
     model_args['hfourier_dim']        = 0
 
-    model = None
-    model = CGPTNO(
+    net = None
+    net = CGPTNO(
                 trunk_size          = model_args['trunk_size'] + model_args['theta_size'],
                 branch_sizes        = model_args['branch_sizes'],     # No input function means no branches
                 output_size         = model_args['output_size'],
@@ -289,22 +310,21 @@ if __name__ == '__main__':
                 horiz_fourier_dim   = model_args['hfourier_dim']
                 ).to(device)
     
+    # parallize
+    model = torch.nn.DataParallel(net)
+    
     # 3. Training Settings
     training_args['epochs']                 = args.epochs
     training_args["save_dir"]               = 'gnot_artemis'
-    #training_args['eval_while_training']    = True
-    #training_args['milestones']             = None
     training_args['base_lr']                = 0.001
-    #training_args['lr_method']              = 'cycle'
-    #training_args['scheduler_gamma']        = None  
-    #training_args['xy_loss']                = 0.0
-    #training_args['pde_loss']               = 1.0
     training_args['weight-decay']           = 0.00005
     training_args['grad-clip']              = 1000.0    
-    #training_args['batchsize']              = 4
-    #training_args['component']              = 'all'
-    #training_args['normalizer']             = None
+    training_args['batchsize']              = 4
     training_args["save_name"]              = args.name
+    
+    
+    dataset = CavityDataset(dataset=dataset)
+    train_dataloader = DataLoader(dataset, batch_size=training_args['batchsize'], shuffle=True)  
 
     loss_f = torch.nn.MSELoss(reduction='mean')
     optimizer = torch.optim.AdamW(model.parameters(), 
@@ -317,15 +337,12 @@ if __name__ == '__main__':
                                                     div_factor=1e4, 
                                                     pct_start=0.2, 
                                                     final_div_factor=1e4, 
-                                                    steps_per_epoch=dataset.data_out.shape[0], 
+                                                    steps_per_epoch=len(train_dataloader), 
                                                     epochs=training_args['epochs']
                                                     )
     
     # Initialize Results Storage: 
     training_run_results = total_model_dict(model_config=model_args, training_config=training_args, data_config=dataset_args)
-
-    # queries are universal for all batches in this case
-    in_queries = dataset.X_for_queries.unsqueeze(0).float().to(device)#.requires_grad_(True)
 
     for epoch in range(training_args['epochs']):
         epoch_start_time = default_timer()
@@ -335,41 +352,37 @@ if __name__ == '__main__':
         torch.cuda.empty_cache()
 
         # Initialize loss storage per epoch
-        loss_total_list             = list()
+        loss_total_list = list()
         
-        batch_average_loss = 0
-        for batch_n in range(dataset.data_out.shape[0]):
-            
+        for batch_n, batch in enumerate(train_dataloader):
             optimizer.zero_grad()
 
-            out_truth   = dataset.data_out[batch_n,...].clone().float().to(device)
+            in_queries, in_keys, out_truth = batch
+            in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
 
             if args.theta:
-                in_keys = dataset.data_lid_v[batch_n].clone().reshape(1,1).float().to(device)
                 out = model(x=in_queries,u_p = in_keys)
             else:
-                in_keys = dataset.data_lid_v[batch_n].clone().reshape(1,1,1).float().to(device)
                 out = model(x=in_queries,inputs = in_keys)
                 
-            loss = loss_f(out.reshape(65,65,3),out_truth)
-            batch_average_loss += loss
+            loss = loss_f(out.reshape(training_args['batchsize'],65,65,3),out_truth)
 
-            # Sudo implementation of batch training of 4 samples
-            if (batch_n+1) % 4 == 0  or batch_n+1 == dataset.data_out.shape[0]: 
-                batch_average_loss = batch_average_loss/(batch_n+1)
-                batch_average_loss.backward()#(retain_graph=True)
+            loss.backward()#(retain_graph=True)
+            print(f'Epoch: {epoch :8} Batch: {batch_n :3} L2 Loss: {loss :12.7f}, Memory Allocated: GPU1 {torch.cuda.memory_allocated(torch.device("cuda:0")) / 1024**3:5.2f}GB ' + 
+                  f'GPU2 {torch.cuda.memory_allocated(torch.device("cuda:0")) / 1024**3:5.2f}GB ' +
+                  f'Memory Cached: GPU1 {torch.cuda.memory_reserved("cuda:1") / 1024**3:5.2f}GB ' +
+                  f'GPU2 {torch.cuda.memory_reserved("cuda:1") / 1024**3:5.2f}GB '
+                  )
 
-                torch.nn.utils.clip_grad_norm_(model.parameters(), training_args['grad-clip'])
-                optimizer.step()
-                scheduler.step()
-                print(f'Epoch: {epoch} Batch: {batch_n} L2 Loss: {batch_average_loss:.7f}, Memory Allocated: {torch.cuda.memory_allocated(device) / 1024**3:.2f}GB Memory Cached: {torch.cuda.memory_reserved(device) / 1024**3:.2f}GB')
-                batch_average_loss = 0
-
-            if training_args['epochs'] == 1: break
+            torch.nn.utils.clip_grad_norm_(model.parameters(), training_args['grad-clip'])
+            optimizer.step()
+            scheduler.step()
+            
+            #if training_args['epochs'] == 1: break
 
         epoch_end_time = default_timer()
         training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
-        training_run_results.update_loss({'Training L2 Loss': batch_average_loss.item()})
+        training_run_results.update_loss({'Training L2 Loss': loss.item()})
 
     if training_args['epochs'] != 1: 
         save_checkpoint(training_args["save_dir"], 

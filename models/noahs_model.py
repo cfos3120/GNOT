@@ -89,7 +89,7 @@ class LinearAttention(nn.Module):
 
 
         if self.attn_type == 'l1':
-            q = q.softmax(dim=-1)
+            q = q
             k = k.softmax(dim=-1)   #
             k_cumsum = k.sum(dim=-2, keepdim=True)
             D_inv = 1. / (q * k_cumsum).sum(dim=-1, keepdim=True)       # normalized
