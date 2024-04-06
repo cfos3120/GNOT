@@ -51,7 +51,7 @@ class Cavity_2D_dataset_for_GNOT():
 
         print(f'Dataset Shape: {self.data_out.shape}, subsampled by {self.sub_x}')
         # NOTE this can also be in the form of reynolds number 
-        self.data_lid_v = np.round(np.arange(0.5,100.5,0.5),1) * 0.1/0.01 #<- apply for Reynolds Number
+        self.data_lid_v = np.round(np.arange(0.5,100.5,0.5),1)# * 0.1/0.01 #<- apply for Reynolds Number
         self.n_batches  = self.data_out.shape[0]
         self.nx         = int(self.data_out.shape[1])
         self.num_nodes  = self.nx**2
@@ -117,7 +117,12 @@ class Cavity_2D_dataset_for_GNOT():
 
         # we need to linearize these matrices.
         self.X_for_queries = torch.concat([Y,X],dim=-1)
-        print('Queries', self.X_for_queries.shape, 'Coordinates', X.shape)
+        
+        # Final Data:
+        self.queries = self.X_for_queries
+        #self.theta = torch.zeros([self.n_batches])
+        self.input_f = self.data_lid_v
+        self.output_truth = self.data_out.reshape(self.n_batches, self.num_nodes,3)
         
         # SECTION 3: Transform to be MIOdataset Loader Compatible
         self.normalizer()
@@ -149,25 +154,38 @@ class Cavity_2D_dataset_for_GNOT():
 
         self.__update_dataset_config()
         
-
     def __normalize_y(self):
         if self.y_normalizer is None:
+            #y_feats_all = torch.cat([g.ndata['y'] for g in self.graphs],dim=0)
+            y_feats_all = self.output_truth.reshape(self.n_batches * self.num_nodes,3)
             if self.normalize_y == 'unit':
-                self.y_normalizer = UnitTransformer(self.data_out)
+                self.y_normalizer = UnitTransformer(y_feats_all)
                 print('Target features are normalized using unit transformer')
+                print(self.y_normalizer.mean, self.y_normalizer.std)
             else: 
                 raise NotImplementedError
-        else:
-            self.data_out = self.y_normalizer.transform(self.data_out, inverse=False)  # a torch quantile transformer
-            print('Target features are normalized using unit transformer')
+        
+        self.output_truth = self.y_normalizer.transform(self.output_truth, inverse=False)
+        #for g in self.graphs:
+        #    g.ndata['y'] = self.y_normalizer.transform(g.ndata["y"], inverse=False)  # a torch quantile transformer
+        print('Target features are normalized using unit transformer')
 
     def __normalize_x(self):
         if self.x_normalizer is None:
+            # X features are the same for all cases (same grid coords)
+            #x_feats_all = torch.cat([g.ndata["x"] for g in self.graphs],dim=0)
+            x_feats_all = self.queries
             if self.normalize_x == 'unit':
-                self.x_normalizer = UnitTransformer(self.X_for_queries)
-                self.up_normalizer = UnitTransformer(self.data_lid_v)
+                self.x_normalizer = UnitTransformer(x_feats_all)
+                #self.up_normalizer = UnitTransformer(self.theta)
             else: 
                 raise NotImplementedError
+
+        #for g in self.graphs:
+        #    g.ndata['x'] = self.x_normalizer.transform(g.ndata['x'], inverse=False)
+        self.queries = self.x_normalizer.transform(self.queries, inverse=False)
+        #self.u_p_list = self.up_normalizer.transform(self.theta, inverse=False)
+        print('Input features are normalized using unit transformer')
 
     def __update_dataset_config(self):
         
@@ -213,9 +231,9 @@ class UnitTransformer():
 class CavityDataset(Dataset):
     def __init__(self,dataset,theta=True):
         self.theta = theta
-        self.in_queries = dataset.X_for_queries
-        self.in_keys_all = dataset.data_lid_v
-        self.out_truth_all = dataset.data_out
+        self.in_queries = dataset.queries
+        self.in_keys_all = dataset.input_f
+        self.out_truth_all = dataset.output_truth
 
     def __len__(self):
         return len(self.in_keys_all)
@@ -223,7 +241,7 @@ class CavityDataset(Dataset):
     def __getitem__(self, idx):
         in_queries  = self.in_queries.float()
         in_keys     = self.in_keys_all[idx].float()
-        out_truth   = self.out_truth_all.reshape(self.out_truth_all.shape[0],self.out_truth_all.shape[1]**2,3)[idx,...].float()
+        out_truth   = self.out_truth_all[idx,...].float()
         
         if self.theta:
             in_keys = in_keys.reshape(1)
@@ -439,8 +457,8 @@ if __name__ == '__main__':
 
         print(f'Epoch: {epoch :8} Batch: {batch_n :3} L2 Loss: {loss :12.7f}, Memory Allocated: GPU1 {torch.cuda.memory_allocated(torch.device("cuda:0")) / 1024**3:5.2f}GB ' + 
                   f'GPU2 {torch.cuda.memory_allocated(torch.device("cuda:1")) / 1024**3:5.2f}GB ' +
-                  f'Memory Cached: GPU1 {torch.cuda.memory_reserved("cuda:0") / 1024**3:5.2f}GB ' +
-                  f'GPU2 {torch.cuda.memory_reserved("cuda:1") / 1024**3:5.2f}GB '
+                  f'Memory Cached: GPU1 {torch.cuda.memory_reserved(torch.device("cuda:0")) / 1024**3:5.2f}GB ' +
+                  f'GPU2 {torch.cuda.memory_reserved(torch.device("cuda:1")) / 1024**3:5.2f}GB '
                   )
         
         epoch_end_time = default_timer()
