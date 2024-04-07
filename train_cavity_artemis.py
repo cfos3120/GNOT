@@ -355,7 +355,8 @@ if __name__ == '__main__':
                                    train_ratio=dataset_args['percent split (decimal)'], 
                                    seed=dataset_args['randomizer seed'])
     dataset.process(theta=args.theta)
-
+    print(dataset.config)
+    
     # 2. Construct Model
     model_args['trunk_size']        = dataset.config['input_dim']
     model_args['theta_size']        = dataset.config['theta_dim']
