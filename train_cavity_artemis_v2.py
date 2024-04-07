@@ -257,7 +257,53 @@ def get_gpu_resources():
 
     return print_string1, print_string2
 
+class LpLoss(object):
+    '''
+    loss function with rel/abs Lp loss
+    '''
+    def __init__(self, d=2, p=2, size_average=True, reduction=True):
+        super(LpLoss, self).__init__()
 
+        #Dimension and Lp-norm type are postive
+        assert d > 0 and p > 0
+
+        self.d = d
+        self.p = p
+        self.reduction = reduction
+        self.size_average = size_average
+
+    def abs(self, x, y):
+        num_examples = x.size()[0]
+
+        #Assume uniform mesh
+        h = 1.0 / (x.size()[1] - 1.0)
+
+        all_norms = (h**(self.d/self.p))*torch.norm(x.reshape(num_examples,-1) - y.reshape(num_examples,-1), self.p, 1)
+
+        if self.reduction:
+            if self.size_average:
+                return torch.mean(all_norms)
+            else:
+                return torch.sum(all_norms)
+
+        return all_norms
+
+    def rel(self, x, y):
+        num_examples = x.size()[0]
+
+        diff_norms = torch.norm(x.reshape(num_examples,-1) - y.reshape(num_examples,-1), self.p, 1)
+        y_norms = torch.norm(y.reshape(num_examples,-1), self.p, 1)
+
+        if self.reduction:
+            if self.size_average:
+                return torch.mean(diff_norms/y_norms)
+            else:
+                return torch.sum(diff_norms/y_norms)
+
+        return diff_norms/y_norms
+
+    def __call__(self, x, y):
+        return self.rel(x, y)
 
 if __name__ == '__main__':
 
@@ -310,6 +356,7 @@ if __name__ == '__main__':
 
     # in-built MSE loss function (not same as paper as this is dgl free)
     loss_function = torch.nn.MSELoss(reduction='mean')
+    loss_function = LpLoss()
     
     # Default optimizer and scheduler from paper
     optimizer = torch.optim.AdamW(model.parameters(), 
@@ -370,7 +417,7 @@ if __name__ == '__main__':
 
         epoch_end_time = default_timer()
         training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
-        training_run_results.update_loss({'Training MSE Loss': loss.item()})
+        training_run_results.update_loss({'Training L2 Loss': loss.item()})
 
         # Now lets evaluate the model at each epoch too
         model.eval()
@@ -384,10 +431,10 @@ if __name__ == '__main__':
             loss_eval += loss_function(out,out_truth).item()
 
         loss_eval = loss_eval/(batch_n+1)
-        training_run_results.update_loss({'Evaluation MSE Loss': loss_eval})
+        training_run_results.update_loss({'Evaluation L2 Loss': loss_eval})
 
         
-        print(f'Epoch: {epoch :8} MSE Training Loss {loss :12.7f}, MSE Evaluation Loss: {loss_eval :12.7f}')
+        print(f'Epoch: {epoch :8} L2 Training Loss {loss :12.7f}, L2 Evaluation Loss: {loss_eval :12.7f}')
 
     if training_args['epochs'] != 1: 
         save_checkpoint(training_args["save_dir"], 
