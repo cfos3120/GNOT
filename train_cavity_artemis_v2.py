@@ -350,6 +350,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_hidden', type=int, default=128)
     parser.add_argument('--train_ratio', type=float, default=0.7)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--lr', type=float, default=0.001)
     args = parser.parse_args()
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -365,6 +366,7 @@ if __name__ == '__main__':
     model_args['n_hidden']          = args.n_hidden
     dataset_args['train_ratio']     = args.train_ratio
     dataset_args['seed']            = args.seed
+    training_args['base_lr']         = args.lr
 
     # get cavity data prepared for model
     dataset = get_cavity_dataset(dataset_args)
