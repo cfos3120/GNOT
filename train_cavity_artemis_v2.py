@@ -168,7 +168,8 @@ class CavityDataset(Dataset):
         if self.train:
             indexes = torch.randperm(self.in_queries.shape[0])
             in_queries  = self.in_queries[indexes,...].float()
-        in_queries  = self.in_queries.float()
+        else:
+            in_queries  = self.in_queries.float()
         in_keys     = self.in_keys_all[idx].float().reshape(1,1)
         out_truth   = self.out_truth_all[idx,...].float()
         return in_queries, in_keys, out_truth
