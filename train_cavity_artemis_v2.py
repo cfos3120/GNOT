@@ -62,6 +62,8 @@ class Cavity_2D_dataset_for_GNOT():
         if self.normalize_y:
             self.output_normalizer = self.create_a_normalizer(self.data_out)
             self.data_out = self.output_normalizer.transform(self.data_out, inverse=False)
+            self.input_f_normalizer = UnitTransformer(self.data_lid_v)
+            self.data_lid_v = self.input_f_normalizer.transform(self.data_lid_v, inverse=False)
             print(f'    Datset Normalized with Means: {self.output_normalizer.mean} and Stds: {self.output_normalizer.std}')
             
         self.__update_dataset_config()
@@ -305,6 +307,28 @@ class LpLoss(object):
     def __call__(self, x, y):
         return self.rel(x, y)
 
+class LpLoss_custom(object):
+    # Loss function is based on the DGL weighted loss function (only it is dgl package free)
+    
+    def __init__(self):
+        super(LpLoss_custom, self).__init__()
+
+    def avg_pool(self,input):
+        #r^{(i)} = \frac{1}{N_i}\sum_{k=1}^{N_i} x^{(i)}_k
+        batch_size = input.shape[0] # shape: Batch, Nodes, Channels
+        num_nodes = torch.tensor(input.shape[1]).reshape(1,1)
+        print(num_nodes.shape)
+        print(torch.sum(input,dim=1).shape)
+        pooled_value = (1/num_nodes.repeat(batch_size,1))*torch.sum(input,dim=1)
+
+        return pooled_value
+    
+    def __call__(self, x, y):
+        
+        losses = self.avg_pool(((x - y).abs() ** 2)) ** (1 / 2)
+        loss = losses.mean()
+        return loss
+
 if __name__ == '__main__':
 
     '''TODO 
@@ -355,8 +379,9 @@ if __name__ == '__main__':
     print(f'\nModel put in parallel processing with {torch.cuda.device_count()} GPUs')
 
     # in-built MSE loss function (not same as paper as this is dgl free)
-    loss_function = torch.nn.MSELoss(reduction='mean')
-    loss_function = LpLoss()
+    #loss_function = torch.nn.MSELoss(reduction='mean')
+    #loss_function = LpLoss()
+    loss_function = LpLoss_custom()
     
     # Default optimizer and scheduler from paper
     optimizer = torch.optim.AdamW(model.parameters(), 
