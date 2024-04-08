@@ -128,7 +128,7 @@ class CavityDataset(Dataset):
         self.in_queries = dataset.queries
         self.in_keys_all = dataset.data_lid_v
         self.out_truth_all = dataset.data_out
-
+        self.train = train
         self.data_splitter(train,inference,train_ratio,seed)
         
     def data_splitter(self, train, inference, train_ratio, seed):
@@ -164,6 +164,10 @@ class CavityDataset(Dataset):
         return len(self.in_keys_all)
 
     def __getitem__(self, idx):
+        # randomize input coordinates
+        if self.train:
+            indexes = torch.randperm(self.in_queries.shape[0])
+            in_queries  = self.in_queries[indexes,...].float()
         in_queries  = self.in_queries.float()
         in_keys     = self.in_keys_all[idx].float().reshape(1,1)
         out_truth   = self.out_truth_all[idx,...].float()
