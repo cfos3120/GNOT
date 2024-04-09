@@ -354,6 +354,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_ratio', type=float, default=0.7)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--batch_size', type=float, default=4)
     args = parser.parse_args()
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -370,6 +371,7 @@ if __name__ == '__main__':
     dataset_args['train_ratio']     = args.train_ratio
     dataset_args['seed']            = args.seed
     training_args['base_lr']         = args.lr
+    training_args['batchsize']         = args.batch_size
 
     # get cavity data prepared for model
     dataset = get_cavity_dataset(dataset_args)
@@ -442,8 +444,11 @@ if __name__ == '__main__':
             scheduler.step()
 
             if batch_n == (len(train_dataloader)-1) and epoch == 0: mem_res2, mem_aloc2 = get_gpu_resources()
-        
-        if epoch == 0: 
+
+            #debug control
+            if training_args['epochs']: break
+
+        if epoch == 0 and torch.cuda.is_available(): 
             print(f'\n  Memory After Final Batch Backwards Pass: \n{mem_res1}\n{mem_aloc1}')
             print(f'  Memory After Final Batch Optimizer Pass: \n{mem_res2}\n{mem_aloc2}\n')
 
