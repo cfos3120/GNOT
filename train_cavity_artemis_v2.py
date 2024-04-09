@@ -164,14 +164,18 @@ class CavityDataset(Dataset):
         return len(self.in_keys_all)
 
     def __getitem__(self, idx):
+        
         # randomize input coordinates
         if self.train:
             indexes = torch.randperm(self.in_queries.shape[0])
             in_queries  = self.in_queries[indexes,...].float()
+            out_truth   = self.out_truth_all[idx,indexes,...].float()
         else:
             in_queries  = self.in_queries.float()
+            out_truth   = self.out_truth_all[idx,...].float()
+
         in_keys     = self.in_keys_all[idx].float().reshape(1,1)
-        out_truth   = self.out_truth_all[idx,...].float()
+        
         return in_queries, in_keys, out_truth
 
 def get_default_args():
