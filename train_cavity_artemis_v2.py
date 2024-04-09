@@ -139,16 +139,15 @@ class CavityDataset(Dataset):
         if inference:
             seed_generator = torch.Generator().manual_seed(seed)
 
-            train_dataset,  test_dataset    = torch.utils.data.random_split(self.out_truth_all, [train_size, test_size], generator=seed_generator)
-            train_lid_v,    test_lid_v      = torch.utils.data.random_split(self.in_keys_all,   [train_size, test_size], generator=seed_generator)
+            train_split,  test_split        = torch.utils.data.random_split(self.out_truth_all, [train_size, test_size], generator=seed_generator)
         
             # The torch.utils.data.random_split() only gives objects with the whole datset or a integers, so we need to override these variables with the indexed datset split
-            train_dataset,  test_dataset    = train_dataset.dataset[train_dataset.indices,...], test_dataset.dataset[test_dataset.indices,...]
-            train_lid_v,    test_lid_v      = train_lid_v.dataset[train_lid_v.indices], test_lid_v.dataset[test_lid_v.indices]
+            train_dataset,  test_dataset    = self.out_truth_all[train_split.indices,...], self.out_truth_all[test_split.indices,...]
+            train_lid_v,    test_lid_v      = self.in_keys_all[train_split.indices], self.in_keys_all[test_split.indices]
             print(f'    Dataset Split up for inference using torch generator seed: {seed_generator.initial_seed()}')
         else:
             train_dataset,  test_dataset    = self.out_truth_all[:train_size,...],  self.out_truth_all[train_size:,...]
-            train_lid_v,    test_lid_v      = self.in_keys_all[:test_size,...],     self.in_keys_all[test_size:,...]
+            train_lid_v,    test_lid_v      = self.in_keys_all[:train_size,...],     self.in_keys_all[train_size:,...]
             print(f'    Dataset Split up for High reynolds number extrapolation')
 
         if train:
