@@ -445,9 +445,6 @@ if __name__ == '__main__':
 
             if batch_n == (len(train_dataloader)-1) and epoch == 0: mem_res2, mem_aloc2 = get_gpu_resources()
 
-            #debug control
-            if training_args['epochs']: break
-
         if epoch == 0 and torch.cuda.is_available(): 
             print(f'\n  Memory After Final Batch Backwards Pass: \n{mem_res1}\n{mem_aloc1}')
             print(f'  Memory After Final Batch Optimizer Pass: \n{mem_res2}\n{mem_aloc2}\n')
