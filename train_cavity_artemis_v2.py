@@ -354,7 +354,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_ratio', type=float, default=0.7)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--lr', type=float, default=0.001)
-    parser.add_argument('--batch_size', type=float, default=4)
+    parser.add_argument('--batch_size', type=int, default=4)
     args = parser.parse_args()
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
