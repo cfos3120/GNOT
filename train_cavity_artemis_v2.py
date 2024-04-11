@@ -449,7 +449,10 @@ if __name__ == '__main__':
 
             out = model(x=in_queries,inputs = in_keys)
             
-            if torch.isnan(out).any(): print('output nan')
+            if torch.isnan(out).any(): 
+                output_string = f'at epoch {epoch} and Batch {batch_n} output nan, dim 1 {torch.isnan(out[...,0]).any()}, dim_2 {torch.isnan(out[...,1]).any()}, dim3  {torch.isnan(out[...,2]).any()}
+                print(output_string)
+                raise ValueError(output_string)
 
             loss = loss_function(out,out_truth)
 
