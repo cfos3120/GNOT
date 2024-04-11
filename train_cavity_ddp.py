@@ -47,7 +47,9 @@ def demo_basic():
                                                     )
 
     optimizer.zero_grad()
-    outputs = ddp_model(torch.randn(4, 10,10,2))
+    in_queries = torch.randn(4, 10,10,2)
+    in_keys = torch.randn(4, 1,1)
+    outputs = ddp_model(x=in_queries,inputs = in_keys)
     labels = torch.randn(4, 10,10,3).to(device_id)
     loss_function(outputs, labels).backward()
     optimizer.step()
