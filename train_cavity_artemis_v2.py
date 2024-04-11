@@ -11,6 +11,7 @@ from timeit import default_timer
 from models.noahs_model import CGPTNO
 from utils import UnitTransformer
 from data_storage.loss_recording import total_model_dict, save_checkpoint
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 class Cavity_2D_dataset_for_GNOT():
     def __init__(self, 
@@ -374,19 +375,18 @@ if __name__ == '__main__':
     training_args['batchsize']         = args.batch_size
 
     # get cavity data prepared for model
+    workers = torch.cuda.device_count()
     dataset = get_cavity_dataset(dataset_args)
-    train_dataloader = DataLoader(dataset, batch_size=training_args['batchsize'], shuffle=True)  
+    train_dataloader = DataLoader(dataset, batch_size=training_args['batchsize'], shuffle=True, num_workers = workers)  
 
     # also get testing datset
     dataset_args_eval = dataset_args
     dataset_args_eval['train'] = False
     dataset_eval = get_cavity_dataset(dataset_args_eval)
-    eval_dataloader = DataLoader(dataset_eval, batch_size=training_args['batchsize'], shuffle=False)  
+    eval_dataloader = DataLoader(dataset_eval, batch_size=training_args['batchsize'], shuffle=False, num_workers = workers)  
     print(f'\n Number of Minibatches: Training Dataset {len(train_dataloader)} and Evaluation Dataset Length {len(eval_dataloader)}')
     # get model and put in parallel
-    net = get_model(model_args).to(device)
-    model = torch.nn.DataParallel(net)
-    print(f'\nModel put in parallel processing with {torch.cuda.device_count()} GPUs')
+    model = get_model(model_args)
 
     # in-built MSE loss function (not same as paper as this is dgl free)
     #loss_function = torch.nn.MSELoss(reduction='mean')
@@ -407,6 +407,12 @@ if __name__ == '__main__':
                                                     steps_per_epoch=len(train_dataloader), 
                                                     epochs=training_args['epochs']
                                                     )
+    
+    
+    model = torch.nn.DataParallel(model)
+    model.to(device)
+
+    print(f'\nModel put in parallel processing with {torch.cuda.device_count()} GPUs')
     
     # Initialize Results Storage: 
     training_run_results = total_model_dict(model_config=model_args, training_config=training_args, data_config=dataset_args)
@@ -444,6 +450,8 @@ if __name__ == '__main__':
             scheduler.step()
 
             if batch_n == (len(train_dataloader)-1) and epoch == 0: mem_res2, mem_aloc2 = get_gpu_resources()
+
+            if batch_n == 0 and training_args['epochs'] == 1: break
 
         if epoch == 0 and torch.cuda.is_available(): 
             print(f'\n  Memory After Final Batch Backwards Pass: \n{mem_res1}\n{mem_aloc1}')
