@@ -17,7 +17,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
 from train_cavity_artemis_v2 import get_default_args, get_model, LpLoss_custom
 
-def demo_basic(rank, world_size):
+def demo_basic():
 
     dist.init_process_group("nccl")
     rank = dist.get_rank()
