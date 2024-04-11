@@ -334,6 +334,9 @@ class LpLoss_custom(object):
         
         losses = self.avg_pool(((x - y).abs() ** 2)) ** (1 / 2)
         loss = losses.mean()
+
+        if torch.isnan(loss).any():
+            print('x',torch.isnan(x).any(), 'y',torch.isnan(y).any())
         return loss
 
 if __name__ == '__main__':
@@ -387,6 +390,11 @@ if __name__ == '__main__':
     print(f'\n Number of Minibatches: Training Dataset {len(train_dataloader)} and Evaluation Dataset Length {len(eval_dataloader)}')
     # get model and put in parallel
     model = get_model(model_args)
+    model = torch.nn.DataParallel(model)
+    model.to(device)
+
+    #torch.distributed.init_process_group(backend='nccl')
+    #model = torch.nn.parallel.DistributedDataParallelCPU(model)
 
     # in-built MSE loss function (not same as paper as this is dgl free)
     #loss_function = torch.nn.MSELoss(reduction='mean')
@@ -408,9 +416,8 @@ if __name__ == '__main__':
                                                     epochs=training_args['epochs']
                                                     )
     
+
     
-    model = torch.nn.DataParallel(model)
-    model.to(device)
 
     print(f'\nModel put in parallel processing with {torch.cuda.device_count()} GPUs')
     
