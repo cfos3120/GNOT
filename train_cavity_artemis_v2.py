@@ -414,8 +414,6 @@ if __name__ == '__main__':
                                                     epochs=training_args['epochs']
                                                     )
 
-    
-
     print(f'\nModel put in parallel processing with {torch.cuda.device_count()} GPUs')
     
     # Initialize Results Storage: 
@@ -440,9 +438,6 @@ if __name__ == '__main__':
 
             in_queries, in_keys, out_truth = batch
             in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
-            if torch.isnan(in_queries).any(): print('inqueres nan')
-            if torch.isnan(in_keys).any(): print('inkeys nan')
-            if torch.isnan(out_truth).any(): print('outqueries nan')
 
             out = model(x=in_queries,inputs = in_keys)
             torch.cuda.synchronize()
