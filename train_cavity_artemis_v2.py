@@ -413,10 +413,6 @@ if __name__ == '__main__':
                                                     steps_per_epoch=len(train_dataloader), 
                                                     epochs=training_args['epochs']
                                                     )
-    
-    print('Using warmup learning rate schedule')
-    warm_up_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda steps: min((steps+1)/(training_args['warmup_epochs'] * len(train_dataloader)), 
-                                                                               np.power(training_args['warmup_epochs'] * len(train_dataloader)/float(steps + 1), 0.5)))
 
     
 
@@ -464,10 +460,7 @@ if __name__ == '__main__':
             torch.nn.utils.clip_grad_norm_(model.parameters(), training_args['grad-clip'])
             optimizer.step()
 
-            if epoch < training_args['warmup_epochs']:
-                warm_up_scheduler.step()
-            else:
-                scheduler.step()
+            scheduler.step()
 
             if batch_n == (len(train_dataloader)-1) and epoch == 0: mem_res2, mem_aloc2 = get_gpu_resources()
 
