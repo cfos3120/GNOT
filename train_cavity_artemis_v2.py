@@ -479,6 +479,7 @@ if __name__ == '__main__':
         
         print(f'Epoch: {epoch :8} L2 Training Loss {loss :12.7f}, L2 Evaluation Loss: {loss_eval :12.7f}')
 
+        sys.stdout.flush()
     if training_args['epochs'] != 1: 
         save_checkpoint(training_args["save_dir"], 
                         training_args["save_name"], 
