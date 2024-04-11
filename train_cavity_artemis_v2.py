@@ -447,7 +447,7 @@ if __name__ == '__main__':
             out = model(x=in_queries,inputs = in_keys)
             torch.cuda.synchronize()
             if torch.isnan(out).any(): 
-                output_string = f'at epoch {epoch} and Batch {batch_n} output nan, dim 1 {torch.isnan(out[...,0]).any()}, dim_2 {torch.isnan(out[...,1]).any()}, dim3  {torch.isnan(out[...,2]).any()} with last losss; {loss.item()}, grad {loss.grad}'
+                output_string = f'at epoch {epoch} and Batch {batch_n} output nan, {torch.sum(torch.isnan(out)).item()} with last losss; {loss.item()} lr {scheduler.get_lr()}'
                 print(output_string)
                 raise ValueError(output_string)
 
