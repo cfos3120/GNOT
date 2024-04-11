@@ -443,9 +443,14 @@ if __name__ == '__main__':
 
             in_queries, in_keys, out_truth = batch
             in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
+            if torch.isnan(in_queries).any(): print('inqueres nan')
+            if torch.isnan(in_keys).any(): print('inkeys nan')
+            if torch.isnan(out_truth).any(): print('outqueries nan')
 
             out = model(x=in_queries,inputs = in_keys)
-                
+            
+            if torch.isnan(out).any(): print('output nan')
+
             loss = loss_function(out,out_truth)
 
             loss.backward()#(retain_graph=True)
@@ -484,7 +489,7 @@ if __name__ == '__main__':
         training_run_results.update_loss({'Evaluation L2 Loss': loss_eval})
 
         
-        print(f'Epoch: {epoch :8} L2 Training Loss {loss :12.7f}, L2 Evaluation Loss: {loss_eval :12.7f}')
+        print(f'Epoch: {epoch :8} L2 Training Loss {loss :12.7f}, L2 Evaluation Loss: {loss_eval :12.7f}, Learning Rate: {scheduler.get_lr()}')
 
         sys.stdout.flush()
     if training_args['epochs'] != 1: 
