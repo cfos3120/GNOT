@@ -215,7 +215,7 @@ def get_default_args():
     training_args['batchsize']              = 4
     training_args["save_dir"]               = 'gnot_artemis'
     training_args["save_name"]              = 'test'
-    training_args['warmup_epochs']          = 10
+    training_args['warmup_epochs']          = 5
 
     return dataset_args, model_args, training_args
         
