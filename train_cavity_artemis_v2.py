@@ -332,11 +332,8 @@ class LpLoss_custom(object):
     
     def __call__(self, x, y):
         
-        losses = self.avg_pool(((x - y).abs() ** 2)) ** (1 / 2)
+        losses = (self.avg_pool(((x - y).abs() ** 2)) + 1e-8) ** (1 / 2)
         loss = losses.mean()
-
-        if torch.isnan(loss).any():
-            print('x',torch.isnan(x).any(), 'y',torch.isnan(y).any())
         return loss
 
 if __name__ == '__main__':
@@ -450,7 +447,7 @@ if __name__ == '__main__':
             out = model(x=in_queries,inputs = in_keys)
             
             if torch.isnan(out).any(): 
-                output_string = f'at epoch {epoch} and Batch {batch_n} output nan, dim 1 {torch.isnan(out[...,0]).any()}, dim_2 {torch.isnan(out[...,1]).any()}, dim3  {torch.isnan(out[...,2]).any()}
+                output_string = f'at epoch {epoch} and Batch {batch_n} output nan, dim 1 {torch.isnan(out[...,0]).any()}, dim_2 {torch.isnan(out[...,1]).any()}, dim3  {torch.isnan(out[...,2]).any()}'
                 print(output_string)
                 raise ValueError(output_string)
 
