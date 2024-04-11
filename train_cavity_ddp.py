@@ -16,30 +16,21 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
 from train_cavity_artemis_v2 import get_default_args, get_model, LpLoss_custom
-import torch.multiprocessing as mp
-
-def setup(rank, world_size):
-
-    # initialize the process group
-    dist.init_process_group("gloo", rank=rank, world_size=world_size)
-
-def cleanup():
-    dist.destroy_process_group()
-
-
 
 def demo_basic(rank, world_size):
-    print(f"Running basic DDP example on rank {rank}.")
-    setup(rank, world_size)
 
+    dist.init_process_group("nccl")
+    rank = dist.get_rank()
+    print(f"Start running basic DDP example on rank {rank}.")
+
+    # create model and move it to GPU with id rank'
     dataset_args, model_args, training_args = get_default_args()
 
-    # create model and move it to GPU with id rank
-    model = get_model(model_args).to(rank)
-    ddp_model = DDP(model, device_ids=[rank])
+    device_id = rank % torch.cuda.device_count()
+    model = get_model(model_args).to(device_id)
+    ddp_model = DDP(model, device_ids=[device_id])
 
     loss_function = LpLoss_custom()
-    
     # Default optimizer and scheduler from paper
     optimizer = torch.optim.AdamW(model.parameters(), 
                                   betas=(0.9, 0.999), 
@@ -57,14 +48,11 @@ def demo_basic(rank, world_size):
 
     optimizer.zero_grad()
     outputs = ddp_model(torch.randn(4, 10,10,2))
-    labels = torch.randn(4, 10,10,3).to(rank)
+    labels = torch.randn(4, 10,10,3).to(device_id)
     loss_function(outputs, labels).backward()
     optimizer.step()
+    dist.destroy_process_group()
 
-    cleanup()
-
-def run_demo(demo_fn, world_size):
-    mp.spawn(demo_fn,
-             args=(world_size,),
-             nprocs=world_size,
-             join=True)
+if __name__ == "__main__":
+    demo_basic()
+    
