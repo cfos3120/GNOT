@@ -445,9 +445,9 @@ if __name__ == '__main__':
             if torch.isnan(out_truth).any(): print('outqueries nan')
 
             out = model(x=in_queries,inputs = in_keys)
-            
+            torch.cuda.synchronize()
             if torch.isnan(out).any(): 
-                output_string = f'at epoch {epoch} and Batch {batch_n} output nan, dim 1 {torch.isnan(out[...,0]).any()}, dim_2 {torch.isnan(out[...,1]).any()}, dim3  {torch.isnan(out[...,2]).any()} with last losss; {loss.item()}'
+                output_string = f'at epoch {epoch} and Batch {batch_n} output nan, dim 1 {torch.isnan(out[...,0]).any()}, dim_2 {torch.isnan(out[...,1]).any()}, dim3  {torch.isnan(out[...,2]).any()} with last losss; {loss.item()}, grad {loss.grad}'
                 print(output_string)
                 raise ValueError(output_string)
 
