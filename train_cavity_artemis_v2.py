@@ -326,8 +326,8 @@ class LpLoss_custom(object):
     def avg_pool(self,input):
         #r^{(i)} = \frac{1}{N_i}\sum_{k=1}^{N_i} x^{(i)}_k
         batch_size = input.shape[0] # shape: Batch, Nodes, Channels
-        num_nodes = torch.tensor(input.shape[1]).reshape(1,1).to(device)
-        pooled_value = (1/num_nodes.repeat(batch_size,1))*torch.sum(input,dim=1)
+        num_nodes = input.shape[1]
+        pooled_value = (1/num_nodes)*torch.sum(input,dim=1)
 
         return pooled_value
     
