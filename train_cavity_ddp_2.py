@@ -288,14 +288,17 @@ if __name__ == '__main__':
     args.local_rank = os.environ['LOCAL_RANK']
     # keep track of whether the current process is the `master` process (totally optional, but I find it useful for data laoding, logging, etc.)
     args.is_master = args.local_rank == 0
-
+    
+    rank = torch.device(f"cuda:{dist.get_rank()}") #torch.cuda.device(args.local_rank)
+    
     # initialize PyTorch distributed using environment variables (you could also do this more explicitly by specifying `rank` and `world_size`, but I find using environment variables makes it so that you can easily use the same script on different machines)
-    dist.init_process_group(backend='nccl', init_method='env://')
+    dist.init_process_group(backend='nccl', rank=rank, init_method='env://')
     
     # set the device
-    args.device = torch.device(f"cuda:{dist.get_rank()}") #torch.cuda.device(args.local_rank)
 
-    
+    torch.cuda.set_device(rank)
+    torch.cuda.empty_cache()
+    device = torch.device(f"cuda:{rank}")
 #    torch.cuda.set_device(args.local_rank)
 
     # set the seed for all GPUs (also make sure to set the seed for random, numpy, etc.)
@@ -316,8 +319,8 @@ if __name__ == '__main__':
     # initialize distributed data parallel (DDP)
     model = DDP(
         model,
-        device_ids=[args.local_rank],
-        output_device=args.local_rank
+        device_ids=[rank],# device_ids=[args.local_rank],
+        output_device=rank #args.local_rank
     )
 
     # initialize your dataset
