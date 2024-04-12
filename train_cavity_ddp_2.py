@@ -296,7 +296,7 @@ if __name__ == '__main__':
     args.device = torch.device(f"cuda:{dist.get_rank()}") #torch.cuda.device(args.local_rank)
 
     
-    torch.cuda.set_device(args.local_rank)
+#    torch.cuda.set_device(args.local_rank)
 
     # set the seed for all GPUs (also make sure to set the seed for random, numpy, etc.)
     torch.cuda.manual_seed_all(SEED)
