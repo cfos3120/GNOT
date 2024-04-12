@@ -280,6 +280,7 @@ def get_model(args):
     return model
 
 if __name__ == '__main__':
+
     parser = ArgumentParser('DDP usage example')
     #parser.add_argument('--local_rank', type=int, default=-1, metavar='N', help='Local process rank.')  # you need this argument in your scripts for DDP to work
     parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
@@ -288,11 +289,13 @@ if __name__ == '__main__':
     # keep track of whether the current process is the `master` process (totally optional, but I find it useful for data laoding, logging, etc.)
     args.is_master = args.local_rank == 0
 
+    # initialize PyTorch distributed using environment variables (you could also do this more explicitly by specifying `rank` and `world_size`, but I find using environment variables makes it so that you can easily use the same script on different machines)
+    dist.init_process_group(backend='nccl', init_method='env://')
+    
     # set the device
     args.device = torch.device(f"cuda:{dist.get_rank()}") #torch.cuda.device(args.local_rank)
 
-    # initialize PyTorch distributed using environment variables (you could also do this more explicitly by specifying `rank` and `world_size`, but I find using environment variables makes it so that you can easily use the same script on different machines)
-    dist.init_process_group(backend='nccl', init_method='env://')
+    
     torch.cuda.set_device(args.local_rank)
 
     # set the seed for all GPUs (also make sure to set the seed for random, numpy, etc.)
