@@ -75,7 +75,7 @@ def demo_basic():
 
     # DDP Dataset
     dataset = get_cavity_dataset(dataset_args)
-    ddp_sampler = dist.DistributedSampler(dataset, shuffle=True)
+    ddp_sampler = torch.utils.data.distributed.DistributedSampler(dataset, shuffle=True)
     train_dataloader = DataLoader(ddp_sampler, batch_size=training_args['batchsize'], shuffle=False) 
 
     # also get testing datset
