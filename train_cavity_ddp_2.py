@@ -306,7 +306,8 @@ if __name__ == '__main__':
     model = get_model(model_args)
 
     # send your model to GPU
-    model = model.to(args.device)
+    device = torch.device(f"cuda:{dist.get_rank()}")
+    model = model.to(device)
 
     # initialize distributed data parallel (DDP)
     model = DDP(
@@ -358,7 +359,7 @@ if __name__ == '__main__':
             optimizer.zero_grad()
 
             in_queries, in_keys, out_truth = batch
-            in_queries, in_keys, out_truth = in_queries.to(args.device), in_keys.to(args.device), out_truth.to(args.device)
+            in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
             
             # forward pass
             out = model(x=in_queries,inputs = in_keys)
