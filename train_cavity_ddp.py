@@ -82,7 +82,7 @@ def demo_basic():
     dataset_args_eval = dataset_args
     dataset_args_eval['train'] = False
     dataset_eval = get_cavity_dataset(dataset_args_eval)
-    ddp_sampler_eval = dist.DistributedSampler(dataset_eval, shuffle=False)
+    ddp_sampler_eval = torch.utils.data.distributed.DistributedSampler(dataset_eval, shuffle=False)
     eval_dataloader = DataLoader(ddp_sampler_eval, batch_size=training_args['batchsize'], shuffle=False)
 
     if device_id == 0:
