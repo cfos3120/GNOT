@@ -289,7 +289,7 @@ if __name__ == '__main__':
     args.is_master = args.local_rank == 0
 
     # set the device
-    args.device = torch.cuda.device(args.local_rank)
+    args.device = torch.device(f"cuda:{dist.get_rank()}") #torch.cuda.device(args.local_rank)
 
     # initialize PyTorch distributed using environment variables (you could also do this more explicitly by specifying `rank` and `world_size`, but I find using environment variables makes it so that you can easily use the same script on different machines)
     dist.init_process_group(backend='nccl', init_method='env://')
