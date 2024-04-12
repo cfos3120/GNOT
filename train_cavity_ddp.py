@@ -51,7 +51,9 @@ def demo_basic():
     in_keys = torch.randn(4, 1,1)
     outputs = ddp_model(x=in_queries,inputs = in_keys)
     labels = torch.randn(4, 100,3).to(device_id)
-    loss_function(outputs, labels).backward()
+    loss = loss_function(outputs, labels)
+    loss.backward()
+    print(loss.item())
     optimizer.step()
     dist.destroy_process_group()
 
