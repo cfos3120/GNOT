@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import numpy as np
+import os
 
 
 import torch
@@ -12,7 +13,7 @@ from models.noahs_model import CGPTNO
 from utils import UnitTransformer
 
 SEED = 42
-BATCH_SIZE = 8
+BATCH_SIZE = 4
 NUM_EPOCHS = 3
 
 class Cavity_2D_dataset_for_GNOT():
@@ -280,10 +281,10 @@ def get_model(args):
 
 if __name__ == '__main__':
     parser = ArgumentParser('DDP usage example')
-    parser.add_argument('--local_rank', type=int, default=-1, metavar='N', help='Local process rank.')  # you need this argument in your scripts for DDP to work
+    #parser.add_argument('--local_rank', type=int, default=-1, metavar='N', help='Local process rank.')  # you need this argument in your scripts for DDP to work
     parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
     args = parser.parse_args()
-
+    args.local_rank = os.environ['LOCAL_RANK']
     # keep track of whether the current process is the `master` process (totally optional, but I find it useful for data laoding, logging, etc.)
     args.is_master = args.local_rank == 0
 
