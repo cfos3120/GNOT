@@ -94,6 +94,7 @@ def demo_basic():
     torch.cuda.set_device(rank)
 
     for epoch in range(training_args['epochs']):
+        ddp_sampler.set_epoch(epoch)
         epoch_start_time = default_timer()
 
         # Set Model to Train
