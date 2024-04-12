@@ -76,14 +76,16 @@ def demo_basic():
     # DDP Dataset
     dataset = get_cavity_dataset(dataset_args)
     ddp_sampler = torch.utils.data.distributed.DistributedSampler(dataset, shuffle=True)
-    train_dataloader = DataLoader(ddp_sampler, batch_size=training_args['batchsize'], shuffle=False) 
+    train_dataloader = DataLoader(dataset, batch_size=training_args['batchsize'], 
+                                  shuffle=False, sampler=ddp_sampler) 
 
     # also get testing datset
     dataset_args_eval = dataset_args
     dataset_args_eval['train'] = False
     dataset_eval = get_cavity_dataset(dataset_args_eval)
     ddp_sampler_eval = torch.utils.data.distributed.DistributedSampler(dataset_eval, shuffle=False)
-    eval_dataloader = DataLoader(ddp_sampler_eval, batch_size=training_args['batchsize'], shuffle=False)
+    eval_dataloader = DataLoader(dataset_eval, batch_size=training_args['batchsize'], 
+                                 shuffle=False, sampler=ddp_sampler_eval)
 
     if device_id == 0:
         # Initialize Results Storage: 
