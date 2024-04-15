@@ -417,7 +417,7 @@ def run(rank, world_size):
     # dataset_args['batchsize']       = BATCHSIZE
     # training_args['epochs']         = EPOCHS
     # training_args["save_name"]      = SAVE_NAME
-
+    dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
 
     model = get_model(model_args).to(device)
