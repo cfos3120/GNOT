@@ -350,7 +350,7 @@ def train(model,train_loader,optimizer,scheduler,batch_size):
         
         in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
         optimizer.zero_grad()
-        output = model(dx=in_queries,inputs = in_keys)
+        output = model(x=in_queries,inputs = in_keys)
         loss = criterion(output, out_truth)
         loss.backward()
         # average gradient as DDP doesn't do it correctly
