@@ -344,7 +344,7 @@ def train(model,train_loader,optimizer,scheduler,batch_size):
     model.train()
     # let all processes sync up before starting with a new epoch of training
     # dist.barrier()
-    criterion = LpLoss_custom().to(device)
+    criterion = LpLoss_custom()#.to(device)
     train_loss = 0.0
     for in_queries, in_keys, out_truth in train_loader:
         
