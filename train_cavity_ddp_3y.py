@@ -414,7 +414,7 @@ def run(rank, world_size):
     # dataset_args['file_path']       = PATH
     # dataset_args['sub_x']           = SUB_X
     # dataset_args['batchsize']       = BATCHSIZE
-    # training_args['epochs']         = EPOCHS
+    training_args['epochs']         = EPOCHS
     # training_args["save_name"]      = SAVE_NAME
     dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
@@ -504,6 +504,23 @@ def init_process(
 
 
 if __name__ == "__main__":
+
+    parser = ArgumentParser(description='GNOT Artemis Training Study')
+    parser.add_argument('--name', type=str, default='test')
+    parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
+    parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--sub_x', type=int, default=4)
+    parser.add_argument('--inference', type=str, default='True')
+    parser.add_argument('--n_hidden', type=int, default=128)
+    parser.add_argument('--train_ratio', type=float, default=0.7)
+    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--batch_size', type=int, default=4)
+    args = parser.parse_args()
+
+    EPOCHS = args.epochs
+
+    # DDP
     world_size = 2
     processes = []
     mp.set_start_method("spawn")
