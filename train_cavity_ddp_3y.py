@@ -457,12 +457,12 @@ def run(rank, world_size):
         }
 
     for epoch in range(training_args['epochs']):
-        train_loss_val = train(model,train_loader,optimizer,batch_size)
-        val_loss_val = val(model,val_loader,batch_size)
+        train_loss_val = train(model,train_loader,optimizer,scheduler,batch_size)
+        #val_loss_val = val(model,val_loader,batch_size)
         if rank == 0:
-            print(f'Rank {rank} epoch {epoch}: {train_loss_val:.2f}/{val_loss_val:.2f}')
+            print(f'Rank {rank} epoch {epoch}: {train_loss_val:.2f}')#/{val_loss_val:.2f}')
             history['train_loss_val'].append(train_loss_val)
-            history['val_loss_val'].append(val_loss_val)
+            #history['val_loss_val'].append(val_loss_val)
     print(f'Rank {rank} finished training')
     print(history)
     cleanup(rank)  
