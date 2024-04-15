@@ -435,7 +435,7 @@ def run(rank, world_size):
                                                     div_factor=1e4, 
                                                     pct_start=0.2, 
                                                     final_div_factor=1e4, 
-                                                    steps_per_epoch=10, 
+                                                    steps_per_epoch=len(train_loader), 
                                                     epochs=training_args['epochs']
                                                     )
     
