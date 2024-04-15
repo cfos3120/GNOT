@@ -409,7 +409,6 @@ def run(rank, world_size):
 
     dataset_args, model_args, training_args = get_default_args()
     
-    train_loader, val_loader, batch_size = get_dataset(dataset_args)
 
     # manual override:
     # dataset_args['file_path']       = PATH
@@ -419,6 +418,7 @@ def run(rank, world_size):
     # training_args["save_name"]      = SAVE_NAME
     dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
+    train_loader, val_loader, batch_size = get_dataset(dataset_args)
 
     model = get_model(model_args).to(device)
     model = nn.SyncBatchNorm.convert_sync_batchnorm(model) # use if model contains batchnorm.
