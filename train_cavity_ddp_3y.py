@@ -401,7 +401,7 @@ def val(model, val_loader,batch_size):
     val_loss_val = val_loss / val_num_batches
     return val_loss_val
 
-def run(rank, world_size):
+def run(rank, world_size, args):
     torch.cuda.set_device(rank)
     torch.cuda.empty_cache()
     device = torch.device(f"cuda:{rank}")
@@ -414,7 +414,7 @@ def run(rank, world_size):
     # dataset_args['file_path']       = PATH
     # dataset_args['sub_x']           = SUB_X
     # dataset_args['batchsize']       = BATCHSIZE
-    training_args['epochs']         = EPOCHS
+    training_args['epochs']           = args.epochs
     # training_args["save_name"]      = SAVE_NAME
     dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
@@ -490,6 +490,7 @@ def init_process(
         rank, # rank of the process
         world_size, # number of workers
         fn, # function to be run
+        args,
         # backend='gloo',# good for single node
         # backend='nccl' # the best for CUDA
         backend='gloo'
@@ -500,7 +501,7 @@ def init_process(
     dist.init_process_group(backend, rank=rank, world_size=world_size)
     dist.barrier()
     setup_for_distributed(rank == 0)
-    fn(rank, world_size)
+    fn(rank, world_size, args)
 
 
 if __name__ == "__main__":
@@ -518,14 +519,12 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=4)
     args = parser.parse_args()
 
-    EPOCHS = args.epochs
-
     # DDP
     world_size = 2
     processes = []
     mp.set_start_method("spawn")
     for rank in range(world_size):
-        p = mp.Process(target=init_process, args=(rank, world_size, run))
+        p = mp.Process(target=init_process, args=(rank, world_size, run, args))
         p.start()
         processes.append(p)
 
