@@ -439,7 +439,7 @@ def run(rank, world_size, args):
 
         epoch_end_time = default_timer()
         if rank == 0:
-            print(f'Rank {rank} epoch {epoch}: {train_loss_val:.2f}')/{val_loss_val:.2f}')
+            print(f'Rank {rank} epoch {epoch}: {train_loss_val:.2f})/{val_loss_val:.2f}')
 
             training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
             training_run_results.update_loss({'Training L2 Loss': train_loss_val.item()})
