@@ -11,7 +11,8 @@ from timeit import default_timer
 from models.noahs_model import CGPTNO
 from utils import UnitTransformer
 from data_storage.loss_recording import total_model_dict, save_checkpoint
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+from accelerate import Accelerator
+#device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 class Cavity_2D_dataset_for_GNOT():
     def __init__(self, 
@@ -182,7 +183,7 @@ def get_default_args():
     
     dataset_args = dict()
     dataset_args['L']           = 1.0
-    dataset_args['sub_x']       = 1
+    dataset_args['sub_x']       = 8
     dataset_args['normalize_y'] = True
     dataset_args['normalize_x'] = True
     dataset_args['vertex']      = True
@@ -359,8 +360,9 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=4)
     args = parser.parse_args()
 
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
+    #device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    accelerator = Accelerator()
+    device = accelerator.device
     dataset_args, model_args, training_args = get_default_args()
 
     # adjustments to defaults
@@ -388,8 +390,7 @@ if __name__ == '__main__':
     print(f'\n Number of Minibatches: Training Dataset {len(train_dataloader)} and Evaluation Dataset Length {len(eval_dataloader)}')
     # get model and put in parallel
     model = get_model(model_args)
-    model = torch.nn.DataParallel(model)
-    model.to(device)
+    model#.to(device)
 
     #torch.distributed.init_process_group(backend='nccl')
     #model = torch.nn.parallel.DistributedDataParallelCPU(model)
@@ -414,6 +415,8 @@ if __name__ == '__main__':
                                                     epochs=training_args['epochs']
                                                     )
 
+    model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(model, optimizer, train_dataloader, eval_dataloader)
+
     print(f'\nModel put in parallel processing with {torch.cuda.device_count()} GPUs')
     
     # Initialize Results Storage: 
@@ -437,18 +440,14 @@ if __name__ == '__main__':
             optimizer.zero_grad()
 
             in_queries, in_keys, out_truth = batch
-            in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
+            #in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
             
             out = model(x=in_queries,inputs = in_keys)
-            torch.cuda.synchronize()
-            if torch.isnan(out).any(): 
-                output_string = f'at epoch {epoch} and Batch {batch_n} output nan, {torch.sum(torch.isnan(out)).item()} with last losss; {loss.item()} lr {scheduler.get_lr()}'
-                print(output_string)
-                raise ValueError(output_string)
 
             loss = loss_function(out,out_truth)
 
-            loss.backward()#(retain_graph=True)
+            #loss.backward()#(retain_graph=True)
+            accelerator.backward(loss)
 
             if batch_n == (len(train_dataloader)-1) and epoch == 0: mem_res1, mem_aloc1 = get_gpu_resources()
 
@@ -475,7 +474,7 @@ if __name__ == '__main__':
         loss_eval = 0
         for batch_n, batch in enumerate(eval_dataloader):
             in_queries, in_keys, out_truth = batch
-            in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
+            #in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
 
             out = model(x=in_queries,inputs = in_keys)
             
