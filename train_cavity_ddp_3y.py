@@ -439,7 +439,7 @@ def run(rank, world_size, args):
 
         epoch_end_time = default_timer()
         if rank == 0:
-            print(f'Rank {rank} epoch {epoch}: {train_loss_val:.2f})/{val_loss_val:.2f}' +
+            print(f'Rank {rank} epoch {epoch}: {train_loss_val:.2f})/{val_loss_val:.2f} ' +
                 f'GPU{0} {torch.cuda.memory_reserved(torch.device("cuda:0")) / 1024**3:5.2f}GB / GPU{1} {torch.cuda.memory_reserved(torch.device("cuda:1")) / 1024**3:5.2f}GB ')
             training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
             training_run_results.update_loss({'Training L2 Loss': train_loss_val})
@@ -479,11 +479,12 @@ def init_process(
         args,
         # backend='gloo',# good for single node
         # backend='nccl' # the best for CUDA
-        backend='gloo'
+        #backend='gloo'
+        backend='nccl'
     ):
     # information used for rank 0
-    os.environ['MASTER_ADDR'] = '127.0.0.1'
-    os.environ['MASTER_PORT'] = '29500'
+    #os.environ['MASTER_ADDR'] = '127.0.0.1'
+    #os.environ['MASTER_PORT'] = '29500'
     dist.init_process_group(backend, rank=rank, world_size=world_size)
     dist.barrier()
     setup_for_distributed(rank == 0)
