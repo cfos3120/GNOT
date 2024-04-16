@@ -10,6 +10,9 @@ from torch.utils.data.distributed import DistributedSampler
 
 from models.noahs_model import CGPTNO
 from utils import UnitTransformer
+from timeit import default_timer
+
+from data_storage.loss_recording import total_model_dict, save_checkpoint
 
 class Cavity_2D_dataset_for_GNOT():
     def __init__(self, 
@@ -302,7 +305,7 @@ def get_dataset(args):
     
     train_sampler = DistributedSampler(train_set,num_replicas=world_size)
     val_sampler = DistributedSampler(val_set,num_replicas=world_size)
-    batch_size = int(4 / float(world_size))
+    batch_size = int(args['batchsize'] / float(world_size))
     
     print(world_size, batch_size)
     
@@ -367,21 +370,21 @@ def train(model,train_loader,optimizer,scheduler,batch_size):
     train_loss_val = train_loss / train_num_batches
     return train_loss_val
 
-def accuracy(output, target, topk=(1,)):
-    """Computes the accuracy over the k top predictions for the specified values of k"""
-    with torch.no_grad():
-        maxk = max(topk)
-        batch_size = target.size(0)
+# def accuracy(output, target, topk=(1,)):
+#     """Computes the accuracy over the k top predictions for the specified values of k"""
+#     with torch.no_grad():
+#         maxk = max(topk)
+#         batch_size = target.size(0)
 
-        _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
+#         _, pred = output.topk(maxk, 1, True, True)
+#         pred = pred.t()
+#         correct = pred.eq(target.view(1, -1).expand_as(pred))
 
-        res = []
-        for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.div_(batch_size))
-        return res
+#         res = []
+#         for k in topk:
+#             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+#             res.append(correct_k.div_(batch_size))
+#         return res
     
 def val(model, val_loader,batch_size):
     device = torch.device(f"cuda:{dist.get_rank()}")
@@ -389,13 +392,13 @@ def val(model, val_loader,batch_size):
     model.eval()
     # let all processes sync up before starting with a new epoch of training
     # dist.barrier()
-    criterion = nn.CrossEntropyLoss().to(device)
+    criterion = LpLoss_custom()#.to(device)
     val_loss = 0.0
     with torch.no_grad():
-        for data, target in val_loader:
-            data, target = data.to(device), target.to(device)
-            output = model(data)
-            loss = criterion(output, target)
+        for in_queries, in_keys, out_truth in val_loader:
+            in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
+            output = model(x=in_queries,inputs = in_keys)
+            loss = criterion(output, out_truth)
             loss_ = {'loss': torch.tensor(loss.item()).to(device)}
             val_loss += reduce_dict(loss_)['loss'].item()
     val_loss_val = val_loss / val_num_batches
@@ -409,13 +412,12 @@ def run(rank, world_size, args):
 
     dataset_args, model_args, training_args = get_default_args()
     
-
     # manual override:
-    # dataset_args['file_path']       = PATH
-    # dataset_args['sub_x']           = SUB_X
-    # dataset_args['batchsize']       = BATCHSIZE
-    training_args['epochs']           = args.epochs
-    # training_args["save_name"]      = SAVE_NAME
+    #dataset_args['file_path']       = args.path
+    dataset_args['sub_x']           = args.sub_x
+    dataset_args['batchsize']       = args.batchsize
+    training_args['epochs']         = args.epochs
+    training_args["save_name"]      = args.name
     dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
     train_loader, val_loader, batch_size = get_dataset(dataset_args)
@@ -439,32 +441,29 @@ def run(rank, world_size, args):
                                                     epochs=training_args['epochs']
                                                     )
     
-    history =  {
-            "rank": rank,
-            "train_loss_val": [],
-            "train_acc_val": [],
-            "val_loss_val": [],
-            "val_acc_val": []
-        }
-    
     if rank == 0:
-        history = {
-            "rank": rank,
-            "train_loss_val": [],
-            "train_acc_val": [],
-            "val_loss_val": [],
-            "val_acc_val": []
-        }
+        training_run_results = total_model_dict(model_config=model_args, training_config=training_args, data_config=dataset_args)
 
     for epoch in range(training_args['epochs']):
+        
+        epoch_start_time = default_timer()
         train_loss_val = train(model,train_loader,optimizer,scheduler,batch_size)
-        #val_loss_val = val(model,val_loader,batch_size)
+        val_loss_val = val(model,val_loader,batch_size)
+
+        epoch_end_time = default_timer()
         if rank == 0:
-            print(f'Rank {rank} epoch {epoch}: {train_loss_val:.2f}')#/{val_loss_val:.2f}')
-            history['train_loss_val'].append(train_loss_val)
-            #history['val_loss_val'].append(val_loss_val)
+            print(f'Rank {rank} epoch {epoch}: {train_loss_val:.2f}')/{val_loss_val:.2f}')
+
+            training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
+            training_run_results.update_loss({'Training L2 Loss': train_loss_val.item()})
+            training_run_results.update_loss({'Evaluation L2 Loss': val_loss_val.item()})
+      
     print(f'Rank {rank} finished training')
-    print(history)
+
+    dist.barrier()
+    if rank == 0:
+        save_checkpoint(args["save_dir"], args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
+    dist.barrier()
     cleanup(rank)  
 
 def cleanup(rank):
