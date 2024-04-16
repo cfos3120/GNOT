@@ -141,7 +141,10 @@ class CavityDataset(Dataset):
         if inference:
             seed_generator = torch.Generator().manual_seed(seed)
 
-            train_split,  test_split        = torch.utils.data.random_split(self.out_truth_all, [train_size, test_size], generator=seed_generator)
+            # we want to pin the end points as training (to ensure complete inference)
+            train_split,  test_split        = torch.utils.data.random_split(self.out_truth_all[1:-1,...], [train_size-2, test_size], generator=seed_generator)
+            train_split.indices.append(0)
+            train_split.indices.append(-1)
         
             # The torch.utils.data.random_split() only gives objects with the whole datset or a integers, so we need to override these variables with the indexed datset split
             train_dataset,  test_dataset    = self.out_truth_all[train_split.indices,...], self.out_truth_all[test_split.indices,...]
@@ -369,22 +372,6 @@ def train(model,train_loader,optimizer,scheduler,batch_size):
         # data, target, output = data.cpu(), target.cpu(), output.cpu()
     train_loss_val = train_loss / train_num_batches
     return train_loss_val
-
-# def accuracy(output, target, topk=(1,)):
-#     """Computes the accuracy over the k top predictions for the specified values of k"""
-#     with torch.no_grad():
-#         maxk = max(topk)
-#         batch_size = target.size(0)
-
-#         _, pred = output.topk(maxk, 1, True, True)
-#         pred = pred.t()
-#         correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-#         res = []
-#         for k in topk:
-#             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-#             res.append(correct_k.div_(batch_size))
-#         return res
     
 def val(model, val_loader,batch_size):
     device = torch.device(f"cuda:{dist.get_rank()}")
