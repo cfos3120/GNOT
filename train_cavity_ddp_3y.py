@@ -402,7 +402,7 @@ def run(rank, world_size, args):
     # manual override:
     #dataset_args['file_path']       = args.path
     dataset_args['sub_x']           = args.sub_x
-    dataset_args['batchsize']       = args.batchsize
+    dataset_args['batchsize']       = args.batch_size
     training_args['epochs']         = args.epochs
     training_args["save_name"]      = args.name
     dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
