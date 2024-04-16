@@ -449,7 +449,7 @@ def run(rank, world_size, args):
 
     dist.barrier()
     if rank == 0:
-        save_checkpoint(args["save_dir"], args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
+        save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
     dist.barrier()
     cleanup(rank)  
 
