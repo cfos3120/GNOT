@@ -55,8 +55,8 @@ def demo_basic(rank, world_size):
     optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
 
     optimizer.zero_grad()
-    outputs = ddp_model(torch.randn(20, 10))
-    labels = torch.randn(20, 5).to(rank)
+    outputs = ddp_model(x=torch.randn(4, 10, 2),inputs = torch.randn(4, 1, 1))
+    labels = torch.randn(4, 10, 3).to(rank)
     loss = loss_fn(outputs, labels)
     loss.backward()
     optimizer.step()
