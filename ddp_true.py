@@ -115,7 +115,7 @@ def demo_basic(rank, world_size):
             training_run_results.update_loss({'Training L2 Loss': train_loss.item()})
             training_run_results.update_loss({'Evaluation L2 Loss': val_loss.item()})
 
-        print(f"Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({string}): {torch.cuda.memory_reserved(torch.device(string)) / 1024**3:8.4f}GB ")
+        print(f"[Epoch{epoch}]: Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({string}): {torch.cuda.memory_reserved(torch.device(string)) / 1024**3:8.4f}GB ")
 
     dist.barrier()
     if rank == 0:
