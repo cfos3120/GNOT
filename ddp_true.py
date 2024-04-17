@@ -28,6 +28,7 @@ parser.add_argument('--train_ratio', type=float, default=0.7)
 parser.add_argument('--seed', type=int, default=42)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--batch_size', type=int, default=4)
+parser.add_argument('--world_size', type=int, default=1)
 global ARGS 
 ARGS = parser.parse_args()
 
@@ -135,4 +136,4 @@ def run(fn, world_size):
 
 if __name__ == "__main__":
 
-    run(demo_basic, 4)
+    run(demo_basic, ARGS.world_size)
