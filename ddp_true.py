@@ -22,7 +22,7 @@ def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
 
-    # initialize the process group "gloo"
+    # initialize the process group "gloo" nccl
     dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
 
@@ -45,6 +45,10 @@ def demo_basic(rank, world_size):
     #model = ToyModel().to(rank)
     ddp_model = DDP(model, device_ids=[rank])
 
+    dataset_args['sub_x']           = ARGS.sub_x
+    dataset_args['batchsize']       = ARGS.batch_size
+    training_args['epochs']         = ARGS.epochs
+    training_args["save_name"]      = ARGS.name
     dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
     train_loader, val_loader, batch_size = get_dataset(dataset_args)
@@ -88,15 +92,8 @@ def demo_basic(rank, world_size):
                 output = ddp_model(x=in_queries,inputs = in_keys)
                 loss = loss_fn(output, out_truth)
 
-
-    # optimizer.zero_grad()
-    # outputs = ddp_model(x=torch.randn(4, 10, 2),inputs = torch.randn(4, 1, 1))
-    # labels = torch.randn(4, 10, 3).to(rank)
-    # loss = loss_fn(outputs, labels)
-    # loss.backward()
-    # optimizer.step()
     string = f"cuda:{rank}"
-    print(f"Loss on Rank {rank} is {loss.item()}. and device({string}) {torch.cuda.memory_reserved(torch.device(string))}")
+    print(f"Loss on Rank {rank} is {loss.item()}. and device({string}) {torch.cuda.memory_reserved(torch.device(string)) / 1024**3:8.4f}GB ")
 
     cleanup()
 
@@ -110,4 +107,20 @@ def run(fn, world_size):
     )
 
 if __name__ == "__main__":
+
+    parser = ArgumentParser(description='GNOT Artemis Training Study')
+    parser.add_argument('--name', type=str, default='test')
+    #parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
+    parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--sub_x', type=int, default=4)
+    parser.add_argument('--inference', type=str, default='True')
+    parser.add_argument('--n_hidden', type=int, default=128)
+    parser.add_argument('--train_ratio', type=float, default=0.7)
+    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--batch_size', type=int, default=4)
+    global ARGS 
+    ARGS = parser.parse_args()
+
+    
     run(demo_basic, 2)
