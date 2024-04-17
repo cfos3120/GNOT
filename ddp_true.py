@@ -107,10 +107,11 @@ def demo_basic(rank, world_size):
                 in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
                 output = ddp_model(x=in_queries,inputs = in_keys)
                 val_loss = loss_fn(output, out_truth)
-
-        training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
-        training_run_results.update_loss({'Training L2 Loss': train_loss.item()})
-        training_run_results.update_loss({'Evaluation L2 Loss': val_loss.item()})
+        
+        if rank == 0:
+            training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
+            training_run_results.update_loss({'Training L2 Loss': train_loss.item()})
+            training_run_results.update_loss({'Evaluation L2 Loss': val_loss.item()})
 
     string = f"cuda:{rank}"
     print(f"Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({string}): {torch.cuda.memory_reserved(torch.device(string)) / 1024**3:8.4f}GB ")
@@ -119,7 +120,7 @@ def demo_basic(rank, world_size):
     if rank == 0:
         save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
     dist.barrier()
-    
+
     cleanup()
 
 
