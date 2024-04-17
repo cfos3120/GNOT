@@ -211,7 +211,6 @@ class LpLoss_custom(object):
         return pooled_value
     
     def __call__(self, x, y):
-        print('LP LOSS devices:', x.get_device(),y.get_device())
         losses = (self.avg_pool(((x - y).abs() ** 2)) + 1e-8) ** (1 / 2)
         loss = losses.mean()
         return loss
