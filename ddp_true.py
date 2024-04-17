@@ -29,17 +29,11 @@ def setup(rank, world_size):
 def cleanup():
     dist.destroy_process_group()
 
-
-class ToyModel(nn.Module):
-    def __init__(self):
-        super(ToyModel, self).__init__()
-        self.net1 = nn.Linear(10, 10)
-        self.relu = nn.ReLU()
-        self.net2 = nn.Linear(10, 5)
-
-    def forward(self, x):
-        return self.net2(self.relu(self.net1(x)))
-
+def average_gradients(model):
+    size = float(dist.get_world_size())
+    for param in model.parameters():
+        dist.all_reduce(param.grad.data, op=dist.ReduceOp.SUM)
+        param.grad.data /= size
 
 def demo_basic(rank, world_size):
     print(f"Running basic DDP example on rank {rank}.")
@@ -51,15 +45,52 @@ def demo_basic(rank, world_size):
     #model = ToyModel().to(rank)
     ddp_model = DDP(model, device_ids=[rank])
 
-    loss_fn = nn.MSELoss()
-    optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
+    dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
-    optimizer.zero_grad()
-    outputs = ddp_model(x=torch.randn(4, 10, 2),inputs = torch.randn(4, 1, 1))
-    labels = torch.randn(4, 10, 3).to(rank)
-    loss = loss_fn(outputs, labels)
-    loss.backward()
-    optimizer.step()
+    train_loader, val_loader, batch_size = get_dataset(dataset_args)
+
+    loss_fn = LpLoss_custom()
+    optimizer = torch.optim.AdamW(ddp_model.parameters(), 
+                                  betas=(0.9, 0.999), 
+                                  lr=training_args['base_lr'],
+                                  weight_decay=training_args['weight-decay']
+                                  )
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
+                                                    max_lr=training_args['base_lr'], 
+                                                    div_factor=1e4, 
+                                                    pct_start=0.2, 
+                                                    final_div_factor=1e4, 
+                                                    steps_per_epoch=len(train_loader), 
+                                                    epochs=training_args['epochs']
+                                                    )
+    
+    if rank == 0:
+        training_run_results = total_model_dict(model_config=model_args, training_config=training_args, data_config=dataset_args)
+
+    for epoch in range(training_args['epochs']):
+
+        for in_queries, in_keys, out_truth in train_loader:
+            optimizer.zero_grad()
+            output = ddp_model(x=in_queries,inputs = in_keys)
+            loss = loss_fn(output, out_truth)
+            loss.backward()
+            average_gradients(ddp_model)
+            torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
+            optimizer.step()
+            scheduler.step()
+
+        with torch.no_grad():
+            for in_queries, in_keys, out_truth in val_loader:
+                output = ddp_model(x=in_queries,inputs = in_keys)
+                loss = loss_fn(output, out_truth)
+
+
+    # optimizer.zero_grad()
+    # outputs = ddp_model(x=torch.randn(4, 10, 2),inputs = torch.randn(4, 1, 1))
+    # labels = torch.randn(4, 10, 3).to(rank)
+    # loss = loss_fn(outputs, labels)
+    # loss.backward()
+    # optimizer.step()
     string = f"cuda:{rank}"
     print(f"Loss on Rank {rank} is {loss.item()}. and device({string}) {torch.cuda.memory_reserved(torch.device(string))}")
 
