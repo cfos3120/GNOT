@@ -86,27 +86,34 @@ def demo_basic(rank, world_size):
 
     print(f"Started training on rank {rank}.")
     for epoch in range(training_args['epochs']):
-
+        
+        epoch_start_time = default_timer()
         for in_queries, in_keys, out_truth in train_loader:
             in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
             optimizer.zero_grad()
             output = ddp_model(x=in_queries,inputs = in_keys)
             
-            loss = loss_fn(output, out_truth)
-            loss.backward()
+            train_loss = loss_fn(output, out_truth)
+            train_loss.backward()
             average_gradients(ddp_model)
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
             optimizer.step()
             scheduler.step()
 
+        epoch_end_time = default_timer()
+
         with torch.no_grad():
             for in_queries, in_keys, out_truth in val_loader:
                 in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
                 output = ddp_model(x=in_queries,inputs = in_keys)
-                loss = loss_fn(output, out_truth)
+                val_loss = loss_fn(output, out_truth)
+
+        training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
+        training_run_results.update_loss({'Training L2 Loss': train_loss.item()})
+        training_run_results.update_loss({'Evaluation L2 Loss': val_loss.item()})
 
     string = f"cuda:{rank}"
-    print(f"Loss on Rank {rank} is {loss.item()}. and device({string}) {torch.cuda.memory_reserved(torch.device(string)) / 1024**3:8.4f}GB ")
+    print(f"Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({string}): {torch.cuda.memory_reserved(torch.device(string)) / 1024**3:8.4f}GB ")
 
     cleanup()
 
