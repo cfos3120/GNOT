@@ -17,6 +17,19 @@ import torch.optim as optim
 
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+parser = ArgumentParser(description='GNOT Artemis Training Study')
+parser.add_argument('--name', type=str, default='test')
+#parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
+parser.add_argument('--epochs', type=int, default=1)
+parser.add_argument('--sub_x', type=int, default=4)
+parser.add_argument('--inference', type=str, default='True')
+parser.add_argument('--n_hidden', type=int, default=128)
+parser.add_argument('--train_ratio', type=float, default=0.7)
+parser.add_argument('--seed', type=int, default=42)
+parser.add_argument('--lr', type=float, default=0.001)
+parser.add_argument('--batch_size', type=int, default=4)
+global ARGS 
+ARGS = parser.parse_args()
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
@@ -45,10 +58,10 @@ def demo_basic(rank, world_size):
     #model = ToyModel().to(rank)
     ddp_model = DDP(model, device_ids=[rank])
 
-    dataset_args['sub_x']           = os.environ['ARGS'].sub_x
-    dataset_args['batchsize']       = os.environ['ARGS'].batch_size
-    training_args['epochs']         = os.environ['ARGS'].epochs
-    training_args["save_name"]      = os.environ['ARGS'].name
+    dataset_args['sub_x']           = ARGS.sub_x
+    dataset_args['batchsize']       = ARGS.batch_size
+    training_args['epochs']         = ARGS.epochs
+    training_args["save_name"]      = ARGS.name
     dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
     train_loader, val_loader, batch_size = get_dataset(dataset_args)
@@ -108,19 +121,4 @@ def run(fn, world_size):
 
 if __name__ == "__main__":
 
-    parser = ArgumentParser(description='GNOT Artemis Training Study')
-    parser.add_argument('--name', type=str, default='test')
-    #parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
-    parser.add_argument('--epochs', type=int, default=1)
-    parser.add_argument('--sub_x', type=int, default=4)
-    parser.add_argument('--inference', type=str, default='True')
-    parser.add_argument('--n_hidden', type=int, default=128)
-    parser.add_argument('--train_ratio', type=float, default=0.7)
-    parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--lr', type=float, default=0.001)
-    parser.add_argument('--batch_size', type=int, default=4)
-    global ARGS 
-    ARGS = parser.parse_args()
-    os.environ['ARGS'] = parser.parse_args()
-    
     run(demo_basic, 2)
