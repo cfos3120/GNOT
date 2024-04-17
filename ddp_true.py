@@ -70,7 +70,7 @@ def demo_basic(rank, world_size):
     print(f"Started training on rank {rank}.")
     for epoch in range(training_args['epochs']):
 
-        for batch_n, in_queries, in_keys, out_truth in enumerate(train_loader):
+        for in_queries, in_keys, out_truth in train_loader:
             in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
             optimizer.zero_grad()
             output = ddp_model(x=in_queries,inputs = in_keys)
