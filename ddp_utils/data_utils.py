@@ -229,6 +229,7 @@ def get_default_args():
     dataset_args['inference']   = True
     dataset_args['train_ratio'] = 0.7
     dataset_args['seed']        = 42
+    dataset_args['batchsize']   = 4
 
     model_args = dict()
     model_args['trunk_size']        = 2
@@ -250,7 +251,6 @@ def get_default_args():
     training_args['base_lr']                = 0.001
     training_args['weight-decay']           = 0.00005
     #training_args['grad-clip']              = 1000.0    
-    training_args['batchsize']              = 4
     training_args["save_dir"]               = 'gnot_artemis'
     training_args["save_name"]              = 'test'
     training_args['warmup_epochs']          = 5
