@@ -480,7 +480,7 @@ def init_process(
         # backend='gloo',# good for single node
         # backend='nccl' # the best for CUDA
         #backend='gloo'
-        backend='nccl'
+        backend='mpi'
     ):
     # information used for rank 0
     os.environ['MASTER_ADDR'] = '127.0.0.1'
