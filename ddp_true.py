@@ -74,7 +74,7 @@ def demo_basic(rank, world_size):
             in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
             optimizer.zero_grad()
             output = ddp_model(x=in_queries,inputs = in_keys)
-            loss = loss_fn(output, out_truth)
+            loss = loss_fn(output.to(rank), out_truth)
             loss.backward()
             average_gradients(ddp_model)
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
