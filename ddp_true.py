@@ -45,10 +45,10 @@ def demo_basic(rank, world_size):
     #model = ToyModel().to(rank)
     ddp_model = DDP(model, device_ids=[rank])
 
-    dataset_args['sub_x']           = ARGS.sub_x
-    dataset_args['batchsize']       = ARGS.batch_size
-    training_args['epochs']         = ARGS.epochs
-    training_args["save_name"]      = ARGS.name
+    dataset_args['sub_x']           = os.environ['ARGS'].sub_x
+    dataset_args['batchsize']       = os.environ['ARGS'].batch_size
+    training_args['epochs']         = os.environ['ARGS'].epochs
+    training_args["save_name"]      = os.environ['ARGS'].name
     dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
     train_loader, val_loader, batch_size = get_dataset(dataset_args)
@@ -121,6 +121,6 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=4)
     global ARGS 
     ARGS = parser.parse_args()
-
+    os.environ['ARGS'] = parser.parse_args()
     
     run(demo_basic, 2)
