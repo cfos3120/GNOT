@@ -115,6 +115,11 @@ def demo_basic(rank, world_size):
     string = f"cuda:{rank}"
     print(f"Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({string}): {torch.cuda.memory_reserved(torch.device(string)) / 1024**3:8.4f}GB ")
 
+    dist.barrier()
+    if rank == 0:
+        save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
+    dist.barrier()
+    
     cleanup()
 
 
