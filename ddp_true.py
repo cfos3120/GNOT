@@ -68,7 +68,7 @@ def function_on_rank(rank, world_size):
 
     model = get_model(model_args).to(rank)
     model = DDP(model,device_ids=[rank])#,output_device=rank)
-
+    dist.barrier()
     if rank == 0:
         print('after model allocation:')
         gpu_print_string,__ = get_gpu_resources()
@@ -114,6 +114,7 @@ def function_on_rank(rank, world_size):
     #         save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
         
     #     #dist.barrier()
+    dist.barrier()
     cleanup()
 
 if __name__ == "__main__":
