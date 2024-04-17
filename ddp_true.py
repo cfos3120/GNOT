@@ -90,31 +90,31 @@ def function_on_rank(rank, world_size):
                                                     epochs=training_args['epochs']
                                                     )
 
-    if rank == 0:
-        training_run_results = total_model_dict(model_config=model_args, training_config=training_args, data_config=dataset_args)
+    # if rank == 0:
+    #     training_run_results = total_model_dict(model_config=model_args, training_config=training_args, data_config=dataset_args)
 
-    for epoch in range(training_args['epochs']):
+    # for epoch in range(training_args['epochs']):
             
-        epoch_start_time = default_timer()
-        train_loss_val = train(model,train_loader,optimizer,scheduler,batch_size)
-        val_loss_val = val(model,val_loader,batch_size)
-        epoch_end_time = default_timer()
+    #     epoch_start_time = default_timer()
+    #     train_loss_val = train(model,train_loader,optimizer,scheduler,batch_size)
+    #     val_loss_val = val(model,val_loader,batch_size)
+    #     epoch_end_time = default_timer()
             
-        if rank == 0:
-            print(f'Rank {rank} epoch {epoch}: {train_loss_val:.2f})/{val_loss_val:.2f}')
-            training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
-            training_run_results.update_loss({'Training L2 Loss': train_loss_val})
-            training_run_results.update_loss({'Evaluation L2 Loss': val_loss_val})
+    #     if rank == 0:
+    #         print(f'Rank {rank} epoch {epoch}: {train_loss_val:.2f})/{val_loss_val:.2f}')
+    #         training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
+    #         training_run_results.update_loss({'Training L2 Loss': train_loss_val})
+    #         training_run_results.update_loss({'Evaluation L2 Loss': val_loss_val})
                 
-        print(f'Rank {rank} finished training')
-        #dist.barrier()
+    #     print(f'Rank {rank} finished training')
+    #     #dist.barrier()
         
-        if rank == 0:
-            print('Saving Model...')
-            save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
+    #     if rank == 0:
+    #         print('Saving Model...')
+    #         save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
         
-        #dist.barrier()
-        cleanup(rank)
+    #     #dist.barrier()
+    cleanup()
 
 if __name__ == "__main__":
     parser = ArgumentParser(description='GNOT Artemis Training Study')

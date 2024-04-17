@@ -79,8 +79,8 @@ def get_gpu_resources():
         print_string2 = '   Memory Allocated:'
         for gpu_n in range(torch.cuda.device_count()):
             gpu_n_str = f"cuda:{gpu_n}"
-            print_string1 += f'GPU{gpu_n} {torch.cuda.memory_reserved(torch.device(gpu_n_str)) / 1024**3:5.2f}GB '
-            print_string2 += f'GPU{gpu_n} {torch.cuda.memory_allocated(torch.device(gpu_n_str)) / 1024**3:5.2f}GB '
+            print_string1 += f'GPU{gpu_n} {torch.cuda.memory_reserved(torch.device(gpu_n_str)) / 1024**3:8.4f}GB '
+            print_string2 += f'GPU{gpu_n} {torch.cuda.memory_allocated(torch.device(gpu_n_str)) / 1024**3:8.4f}GB '
     else:
         print_string1, print_string2 = '        No GPUs', '        No GPUs'
 
