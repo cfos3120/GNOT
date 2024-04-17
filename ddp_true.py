@@ -65,7 +65,7 @@ def function_on_rank(rank, world_size):
     dataset_args, model_args, training_args = get_default_args()
 
     dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
-    
+
     model = get_model(model_args).to(rank)
     model = DDP(model,device_ids=[rank])#,output_device=rank)
 
@@ -107,13 +107,13 @@ def function_on_rank(rank, world_size):
             training_run_results.update_loss({'Evaluation L2 Loss': val_loss_val})
                 
         print(f'Rank {rank} finished training')
-        dist.barrier()
+        #dist.barrier()
         
         if rank == 0:
             print('Saving Model...')
             save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
         
-        dist.barrier()
+        #dist.barrier()
         cleanup(rank)
 
 if __name__ == "__main__":
