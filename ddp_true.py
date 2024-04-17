@@ -71,6 +71,7 @@ def demo_basic(rank, world_size):
     for epoch in range(training_args['epochs']):
 
         for in_queries, in_keys, out_truth in train_loader:
+            in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
             optimizer.zero_grad()
             output = ddp_model(x=in_queries,inputs = in_keys)
             loss = loss_fn(output, out_truth)
