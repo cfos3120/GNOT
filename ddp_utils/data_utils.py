@@ -250,7 +250,7 @@ def get_default_args():
     training_args['epochs']                 = 1
     training_args['base_lr']                = 0.001
     training_args['weight-decay']           = 0.00005
-    #training_args['grad-clip']              = 1000.0    
+    training_args['grad-clip']              = 1000.0    
     training_args["save_dir"]               = 'gnot_artemis'
     training_args["save_name"]              = 'test'
     training_args['warmup_epochs']          = 5
