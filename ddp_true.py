@@ -64,6 +64,8 @@ def function_on_rank(rank, world_size):
 
     dataset_args, model_args, training_args = get_default_args()
 
+    dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
+    
     model = get_model(model_args).to(rank)
     model = DDP(model,device_ids=[rank])#,output_device=rank)
 
@@ -115,4 +117,17 @@ def function_on_rank(rank, world_size):
         cleanup(rank)
 
 if __name__ == "__main__":
+    parser = ArgumentParser(description='GNOT Artemis Training Study')
+    parser.add_argument('--name', type=str, default='test')
+    parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
+    parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--sub_x', type=int, default=4)
+    parser.add_argument('--inference', type=str, default='True')
+    parser.add_argument('--n_hidden', type=int, default=128)
+    parser.add_argument('--train_ratio', type=float, default=0.7)
+    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--batch_size', type=int, default=4)
+    args = parser.parse_args()
+
     run(function_on_rank, 2)
