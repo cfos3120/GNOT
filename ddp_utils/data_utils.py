@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
 
 from models.noahs_model import CGPTNO
+from utils import UnitTransformer
 
 class Cavity_2D_dataset_for_GNOT():
     def __init__(self, 
