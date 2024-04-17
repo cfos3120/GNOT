@@ -50,7 +50,7 @@ def demo_basic(rank, world_size):
     loss.backward()
     optimizer.step()
     string = f"cuda:{rank}"
-    print(f"Loss on Rank {rank} is {loss.item()}. and {torch.cuda.memory_reserved(torch.device(string))}")
+    print(f"Loss on Rank {rank} is {loss.item()}. and device({string}) {torch.cuda.memory_reserved(torch.device(string))}")
 
     cleanup()
 
