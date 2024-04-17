@@ -135,4 +135,4 @@ def run(fn, world_size):
 
 if __name__ == "__main__":
 
-    run(demo_basic, 2)
+    run(demo_basic, 4)
