@@ -99,6 +99,8 @@ def demo_basic(rank, world_size):
                                                     epochs=training_args['epochs']
                                                     )
     
+    print(f'Length of Train Loader: {len(train_loader)} for world size {world_size} and batchsize {ARGS.batch_size} produces trainloader batch size of {batch_size}')
+    
     if rank == 0:
         training_run_results = total_model_dict(model_config=model_args, training_config=training_args, data_config=dataset_args)
     string = f"cuda:{rank}"
@@ -115,15 +117,14 @@ def demo_basic(rank, world_size):
             output = ddp_model(x=in_queries,inputs = in_keys)
             
             train_loss = loss_fn(output, out_truth)
-            dist.barrier()
-            train_loss = average_loss(train_loss)
-            dist.barrier()
+            #train_loss = average_loss(train_loss)
+            #dist.barrier()
             train_loss.backward()
             #if rank == 0: 
                 #nan_flag, inf_flag = check_gradients(model)
                 #print(f'[Epoch{epoch}][Rank{rank}] Before mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()}')
             #average_gradients(ddp_model)
-            torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
+            torch.nn.utils.clip_grad_norm_(ddp_model.parameters(),training_args['grad-clip'])
             optimizer.step()
             scheduler.step()
 
