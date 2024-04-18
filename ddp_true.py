@@ -114,17 +114,17 @@ def demo_basic(rank, world_size):
                 nan_flag, inf_flag = check_gradients(model)
                 print(f'[Epoch{epoch}][Rank{rank}] Before mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()}')
             average_gradients(ddp_model)
-            if rank == 0: 
-                nan_flag, inf_flag = check_gradients(model)
-                print(f'[Epoch{epoch}][Rank{rank}] After mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag}')
+            # if rank == 0: 
+            #     nan_flag, inf_flag = check_gradients(model)
+            #     print(f'[Epoch{epoch}][Rank{rank}] After mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag}')
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
-            if rank == 0: 
-                nan_flag, inf_flag = check_gradients(model)
-                print(f'[Epoch{epoch}][Rank{rank}] After grad clip: Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag}')
+            # if rank == 0: 
+            #     nan_flag, inf_flag = check_gradients(model)
+            #     print(f'[Epoch{epoch}][Rank{rank}] After grad clip: Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag}')
             optimizer.step()
-            if rank == 0: print(f'[Epoch{epoch}][Rank{rank}] After Optimizer: Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()}')
+            #if rank == 0: print(f'[Epoch{epoch}][Rank{rank}] After Optimizer: Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()}')
             scheduler.step()
-            if rank == 0: print(f'[Epoch{epoch}][Rank{rank}] After Step: Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()}')
+            #if rank == 0: print(f'[Epoch{epoch}][Rank{rank}] After Step: Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()}')
 
         epoch_end_time = default_timer()
 
@@ -141,7 +141,7 @@ def demo_basic(rank, world_size):
             training_run_results.update_loss({'Evaluation L2 Loss': val_loss.item()})
 
         if rank == 0:
-            print(f"[Epoch{epoch}]: Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({string}): {torch.cuda.memory_reserved(torch.device(string)) / 1024**3:8.4f}GB ")
+            #print(f"[Epoch{epoch}]: Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({string}): {torch.cuda.memory_reserved(torch.device(string)) / 1024**3:8.4f}GB ")
 
     dist.barrier()
     if rank == 0:
