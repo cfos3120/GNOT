@@ -119,8 +119,8 @@ def demo_basic(rank, world_size):
             train_loss = average_loss(train_loss)
             dist.barrier()
             train_loss.backward()
-            if rank == 0: 
-                nan_flag, inf_flag = check_gradients(model)
+            #if rank == 0: 
+                #nan_flag, inf_flag = check_gradients(model)
                 print(f'[Epoch{epoch}][Rank{rank}] Before mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()}')
             #average_gradients(ddp_model)
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
@@ -141,9 +141,8 @@ def demo_basic(rank, world_size):
             training_run_results.update_loss({'Training L2 Loss': train_loss.item()})
             training_run_results.update_loss({'Evaluation L2 Loss': val_loss.item()})
 
-        #if rank == 0:
-            #print(f"[Epoch{epoch}]: Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({string}): {torch.cuda.memory_reserved(torch.device(string)) / 1024**3:8.4f}GB ")
-
+        print(f"[Epoch{epoch}]: Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({string}): {torch.cuda.memory_reserved(torch.device(string)) / 1024**3:8.4f}GB ")
+    
     dist.barrier()
     if rank == 0:
         save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
