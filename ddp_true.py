@@ -30,6 +30,7 @@ parser.add_argument('--seed', type=int, default=42)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--batch_size', type=int, default=4)
 parser.add_argument('--world_size', type=int, default=1)
+parser.add_argument('--pde_weight', type=float, default=0.0)
 global ARGS 
 ARGS = parser.parse_args()
 
@@ -81,9 +82,10 @@ def demo_basic(rank, world_size):
     dataset_args['batchsize']       = ARGS.batch_size
     training_args['epochs']         = ARGS.epochs
     training_args["save_name"]      = ARGS.name
+    training_args['PDE_weight']     = ARGS.pde_weight
     dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
-    train_loader, val_loader, batch_size = get_dataset(dataset_args)
+    train_loader, val_loader, batch_size, output_normalizer, input_f_normalizer = get_dataset(dataset_args)
 
     loss_fn = LpLoss_custom()
     # optimizer = torch.optim.AdamW(ddp_model.parameters(), 
@@ -119,19 +121,30 @@ def demo_basic(rank, world_size):
         dist.barrier()
         torch.cuda.empty_cache()
         epoch_start_time = default_timer()
-        for in_queries, in_keys, out_truth in train_loader:
+        for in_queries, in_keys, out_truth, reverse_indices in train_loader:
             in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
             optimizer.zero_grad()
             output = ddp_model(x=in_queries,inputs = in_keys)
             
+            # Pointwise Loss
             train_loss = loss_fn(output, out_truth)
-            #train_loss = average_loss(train_loss)
-            #dist.barrier()
-            train_loss.backward()
+
+            # PDE Loss
+            if training_args['PDE_weight'] > 0:
+                outputs, input_keys = output_realiser(output, in_keys, output_normalizer, input_f_normalizer, reverse_indices)
+                Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=outputs, lid_velocity=input_keys, nu=0.01, L=1.0)
+                pde_loss_1 = loss_fn(Du_dx)
+                pde_loss_2 = loss_fn(Dv_dy)
+                pde_loss_3 = loss_fn(continuity_eq)
+                pde_loss = (pde_loss_1 + pde_loss_2 + pde_loss_3)/3
+                total_loss = train_loss + training_args['PDE_weight']*pde_loss
+            else 
+                total_loss = train_loss
+
+            total_loss.backward()
             #if rank == 0: 
                 #nan_flag, inf_flag = check_gradients(model)
                 #print(f'[Epoch{epoch}][Rank{rank}] Before mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()}')
-            #average_gradients(ddp_model)
             torch.nn.utils.clip_grad_norm_(ddp_model.parameters(),training_args['grad-clip'])
             optimizer.step()
             scheduler.step()
@@ -139,11 +152,11 @@ def demo_basic(rank, world_size):
         epoch_end_time = default_timer()
 
         dist.barrier()
-        # with torch.no_grad():
-        #     for in_queries, in_keys, out_truth in val_loader:
-        #         in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
-        #         output = ddp_model(x=in_queries,inputs = in_keys)
-        #         val_loss = loss_fn(output, out_truth)
+        with torch.no_grad():
+            for in_queries, in_keys, out_truth in val_loader:
+                in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
+                output = ddp_model(x=in_queries,inputs = in_keys)
+                val_loss = loss_fn(output, out_truth)
         val_loss = torch.tensor([0])
 
         if rank == 0:

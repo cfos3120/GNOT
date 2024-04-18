@@ -138,6 +138,8 @@ class CavityDataset(Dataset):
 
             # we want to pin the end points as training (to ensure complete inference)
             train_split,  test_split        = torch.utils.data.random_split(self.out_truth_all[1:-1,...], [train_size-2, test_size], generator=seed_generator)
+            test_split.indices = list(1 + np.array(test_split.indices))
+            train_split.indices = list(1 + np.array(train_split.indices))
             train_split.indices.append(0)
             train_split.indices.append(-1)
         
@@ -164,18 +166,20 @@ class CavityDataset(Dataset):
 
     def __getitem__(self, idx):
         
+        in_keys     = self.in_keys_all[idx].float().reshape(1,1)
+
         # randomize input coordinates
         if self.train:
             indexes = torch.randperm(self.in_queries.shape[0])
             in_queries  = self.in_queries[indexes,...].float()
             out_truth   = self.out_truth_all[idx,indexes,...].float()
+            reverse_indices = torch.argsort(indexes)
+            return in_queries, in_keys, out_truth, reverse_indices
         else:
             in_queries  = self.in_queries.float()
             out_truth   = self.out_truth_all[idx,...].float()
-
-        in_keys     = self.in_keys_all[idx].float().reshape(1,1)
-        
-        return in_queries, in_keys, out_truth
+            reverse_indices = torch.arange(self.in_queries.shape[0]) # <- just normal order
+            return in_queries, in_keys, out_truth, reverse_indices
 
 def get_cavity_dataset(args):
 
@@ -194,7 +198,7 @@ def get_cavity_dataset(args):
                                     seed=args['seed']
                                     )
     
-    return torch_dataset
+    return torch_dataset, dataset.output_normalizer, dataset.input_f_normalizer
 
 class LpLoss_custom(object):
     # Loss function is based on the DGL weighted loss function (only it is dgl package free)
@@ -210,8 +214,12 @@ class LpLoss_custom(object):
 
         return pooled_value
     
-    def __call__(self, x, y):
-        losses = (self.avg_pool(((x - y).abs() ** 2)) + 1e-8) ** (1 / 2)
+    def __call__(self, x, y=None):
+
+        if y is not None:
+            losses = (self.avg_pool(((x - y).abs() ** 2)) + 1e-8) ** (1 / 2)
+        else:
+            losses = (self.avg_pool((x.abs() ** 2)) + 1e-8) ** (1 / 2)
         loss = losses.mean()
         return loss
 
@@ -253,6 +261,7 @@ def get_default_args():
     training_args["save_dir"]               = 'gnot_artemis'
     training_args["save_name"]              = 'test'
     training_args['warmup_epochs']          = 5
+    training_args['PDE_weight']             = 0.25
 
     return dataset_args, model_args, training_args
 
@@ -278,7 +287,7 @@ def get_model(args):
 # this may need 'self.train_data.sampler.set_epoch(epoch)' at the start of each epoch
 def get_dataset(args):
     world_size = dist.get_world_size()
-    train_set = val_set = get_cavity_dataset(args)
+    train_set, output_normalizer, input_f_normalizer = get_cavity_dataset(args)
     args['train'] = False
     val_set = get_cavity_dataset(args)
     
@@ -299,4 +308,92 @@ def get_dataset(args):
         batch_size=batch_size
     )
 
-    return train_loader, val_loader, batch_size
+    return train_loader, val_loader, batch_size, output_normalizer, input_f_normalizer
+
+def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L, pressure_overide=False):
+
+    # with boundary conditions
+
+    batchsize = U.size(0)
+    nx = U.size(1)
+    ny = U.size(2)
+    
+    device = U.device
+
+    # assign Reynolds Number array:
+    Re = (lid_velocity * L/nu).repeat(1,nx-2,ny-2)
+
+    # create isotropic grid (non-dimensional i.e. L=1.0)
+    y = torch.tensor(np.linspace(0, 1, nx), dtype=torch.float, device=device)
+    x = y
+
+    # initialize Storage of derivatives as zeros
+    ux = torch.zeros([batchsize, nx-2, ny-2])
+    uy = torch.zeros_like(ux)
+    vx = torch.zeros_like(ux)
+    vy = torch.zeros_like(ux)
+    uxx = torch.zeros_like(ux)
+    uyy = torch.zeros_like(ux)
+    vxx = torch.zeros_like(ux)
+    vyy = torch.zeros_like(ux)
+    px = torch.zeros_like(ux)
+    py = torch.zeros_like(ux)
+    
+    # second order first derivative scheme
+    dx = abs(x[1]-x[0])
+    dy = dx
+       
+    u = torch.zeros([batchsize, nx-2, ny-2])
+    v = torch.zeros_like(u)
+    p = torch.zeros_like(u)
+    
+    # assign internal field
+    u = U[...,0]
+    v = U[...,1]
+    p = U[...,2]
+
+    if pressure_overide:
+        p = (u**2 + v**2)*1/2           #density is one
+        
+    # gradients in internal zone
+    uy  = (u[:, 2:  , 1:-1] -   u[:,  :-2, 1:-1]) / (2*dy)
+    ux  = (u[:, 1:-1, 2:  ] -   u[:, 1:-1,  :-2]) / (2*dx)
+    uyy = (u[:, 2:  , 1:-1] - 2*u[:, 1:-1, 1:-1] + u[:,  :-2, 1:-1]) / (dy**2)
+    uxx = (u[:, 1:-1, 2:  ] - 2*u[:, 1:-1, 1:-1] + u[:, 1:-1,  :-2]) / (dx**2)
+
+    vy  = (v[:, 2:  , 1:-1] -   v[:,  :-2, 1:-1]) / (2*dy)
+    vx  = (v[:, 1:-1, 2:  ] -   v[:, 1:-1,  :-2]) / (2*dx)
+    vyy = (v[:, 2:  , 1:-1] - 2*v[:, 1:-1, 1:-1] + v[:,  :-2, 1:-1]) / (dy**2)
+    vxx = (v[:, 1:-1, 2:  ] - 2*v[:, 1:-1, 1:-1] + v[:, 1:-1,  :-2]) / (dx**2)
+
+    py  = (p[:, 2:  , 1:-1] - p[:,  :-2, 1:-1]) / (2*dy)
+    px  = (p[:, 1:-1, 2:  ] - p[:, 1:-1,  :-2]) / (2*dx)
+
+    # No time derivative as we are assuming steady state solution
+    Du_dx = U[...,1:-1,1:-1 ,0]*ux + U[...,1:-1,1:-1, 1]*uy - (1/Re) * (uxx + uyy) + px
+    Dv_dy = U[...,1:-1,1:-1 ,0]*vx + U[...,1:-1,1:-1 ,1]*vy - (1/Re) * (vxx + vyy) + py
+    continuity_eq = (ux + vy)
+
+    fdm_derivatives = tuple([ux, uy, vx, vy, px, py, uxx, uyy, vxx, vyy, Du_dx, Dv_dy, continuity_eq])
+    
+    return Du_dx, Dv_dy, continuity_eq, fdm_derivatives
+
+def output_realiser(model_output, model_input_key, output_normalizer, input_key_normalizer, reverse_indices=None):
+    output = model_output.copy()
+    input_key = model_input_key.copy()
+
+    # rearrange (only makes a difference if input query coordinates was shuffled)
+    if reverse_indices is not None:
+        output = torch.concat([output[batch,index_order,:].unsqueeze(0) for batch, index_order in enumerate(reverse_indices)],dim=0)
+
+    output = output_normalizer.transform(output, inverse=True)
+    input_key = input_key_normalizer.transform(input_key, inverse=True)
+
+    # assuming isotropic grid:
+    dim = int(np.sqrt(model_output.shape[1]))
+    batches = int(shape[0]))
+    channels = batches = int(shape[-1]))
+    output = output.reshape(batches, dim, dim, channels)
+    return output, input_key
+
+
