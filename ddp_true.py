@@ -121,7 +121,7 @@ def demo_basic(rank, world_size):
             train_loss.backward()
             #if rank == 0: 
                 #nan_flag, inf_flag = check_gradients(model)
-                print(f'[Epoch{epoch}][Rank{rank}] Before mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()}')
+                #print(f'[Epoch{epoch}][Rank{rank}] Before mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()}')
             #average_gradients(ddp_model)
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
             optimizer.step()
