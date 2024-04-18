@@ -100,7 +100,8 @@ def demo_basic(rank, world_size):
 
     print(f"Started training on rank {rank}.")
     for epoch in range(training_args['epochs']):
-        
+        dist.barrier()
+        torch.cuda.empty_cache()
         epoch_start_time = default_timer()
         for in_queries, in_keys, out_truth in train_loader:
             in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
@@ -111,22 +112,23 @@ def demo_basic(rank, world_size):
             train_loss.backward()
             if rank == 0: 
                 nan_flag, inf_flag = check_gradients(model)
-                print(f'[Epoch{epoch}][Rank{rank}] Before mean(grad): LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()}')
+                print(f'[Epoch{epoch}][Rank{rank}] Before mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()}')
             average_gradients(ddp_model)
             if rank == 0: 
                 nan_flag, inf_flag = check_gradients(model)
-                print(f'[Epoch{epoch}][Rank{rank}] After mean(grad): LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag}')
+                print(f'[Epoch{epoch}][Rank{rank}] After mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag}')
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
             if rank == 0: 
                 nan_flag, inf_flag = check_gradients(model)
-                print(f'[Epoch{epoch}][Rank{rank}] After grad clip: LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag}')
+                print(f'[Epoch{epoch}][Rank{rank}] After grad clip: Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag}')
             optimizer.step()
-            if rank == 0: print(f'[Epoch{epoch}][Rank{rank}] After Optimizer: LR:{scheduler.get_lr()}')
+            if rank == 0: print(f'[Epoch{epoch}][Rank{rank}] After Optimizer: Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()}')
             scheduler.step()
-            if rank == 0: print(f'[Epoch{epoch}][Rank{rank}] After Step: LR:{scheduler.get_lr()}')
+            if rank == 0: print(f'[Epoch{epoch}][Rank{rank}] After Step: Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()}')
 
         epoch_end_time = default_timer()
 
+        dist.barrier()
         with torch.no_grad():
             for in_queries, in_keys, out_truth in val_loader:
                 in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
