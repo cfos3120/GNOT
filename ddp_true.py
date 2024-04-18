@@ -69,7 +69,7 @@ def check_gradients(model):
 def demo_basic(rank, world_size):
     print(f"Running basic DDP example on rank {rank}.")
     setup(rank, world_size)
-
+    torch.manual_seed(42)
     # create model and move it to GPU with id rank
     dataset_args, model_args, training_args = get_default_args()
     model = get_model(model_args).to(rank)
