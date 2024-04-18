@@ -14,6 +14,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim as optim
+from torch.distributed.optim import ZeroRedundancyOptimizer
 
 from torch.nn.parallel import DistributedDataParallel as DDP
 
@@ -85,11 +86,18 @@ def demo_basic(rank, world_size):
     train_loader, val_loader, batch_size = get_dataset(dataset_args)
 
     loss_fn = LpLoss_custom()
-    optimizer = torch.optim.AdamW(ddp_model.parameters(), 
-                                  betas=(0.9, 0.999), 
-                                  lr=training_args['base_lr'],
-                                  weight_decay=training_args['weight-decay']
-                                  )
+    # optimizer = torch.optim.AdamW(ddp_model.parameters(), 
+    #                               betas=(0.9, 0.999), 
+    #                               lr=training_args['base_lr'],
+    #                               weight_decay=training_args['weight-decay']
+    #                               )
+    optimizer = ZeroRedundancyOptimizer(ddp_model.parameters(),
+                                        optimizer_class=torch.optim.AdamW,
+                                        betas=(0.9, 0.999), 
+                                        lr=training_args['base_lr'],
+                                        weight_decay=training_args['weight-decay']
+                                        )
+    
     scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
                                                     max_lr=training_args['base_lr'], 
                                                     div_factor=1e4, 
