@@ -144,8 +144,8 @@ def demo_basic(rank, world_size):
         #         in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
         #         output = ddp_model(x=in_queries,inputs = in_keys)
         #         val_loss = loss_fn(output, out_truth)
-        val_loss = 0
-        
+        val_loss = torch.tensor([0])
+
         if rank == 0:
             training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
             training_run_results.update_loss({'Training L2 Loss': train_loss.item()})
