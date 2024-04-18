@@ -99,7 +99,7 @@ def demo_basic(rank, world_size):
                                                     epochs=training_args['epochs']
                                                     )
     
-    print(f'Length of Train Loader: {len(train_loader)} for world size {world_size} and batchsize {ARGS.batch_size} produces trainloader batch size of {batch_size}')
+    print(f'[Rank {rank}] Length of Train Loader: {len(train_loader)} for world size {world_size} and batchsize {ARGS.batch_size} produces trainloader batch size of {batch_size}')
     
     if rank == 0:
         training_run_results = total_model_dict(model_config=model_args, training_config=training_args, data_config=dataset_args)
