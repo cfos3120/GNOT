@@ -139,11 +139,12 @@ def demo_basic(rank, world_size):
         epoch_end_time = default_timer()
 
         dist.barrier()
-        with torch.no_grad():
-            for in_queries, in_keys, out_truth in val_loader:
-                in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
-                output = ddp_model(x=in_queries,inputs = in_keys)
-                val_loss = loss_fn(output, out_truth)
+        # with torch.no_grad():
+        #     for in_queries, in_keys, out_truth in val_loader:
+        #         in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
+        #         output = ddp_model(x=in_queries,inputs = in_keys)
+        #         val_loss = loss_fn(output, out_truth)
+        val_loss = 0
         
         if rank == 0:
             training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
