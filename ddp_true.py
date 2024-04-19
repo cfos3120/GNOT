@@ -39,7 +39,7 @@ def setup(rank, world_size):
     os.environ['MASTER_PORT'] = '12355'
 
     # initialize the process group "gloo" nccl
-    dist.init_process_group("gloo", rank=rank, world_size=world_size)
+    dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
 
 def cleanup():
@@ -153,11 +153,12 @@ def demo_basic(rank, world_size):
 
         dist.barrier()
         with torch.no_grad():
+            val_loss = 0
             for in_queries, in_keys, out_truth,__ in val_loader:
                 in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
                 output = ddp_model(x=in_queries,inputs = in_keys)
-                val_loss = loss_fn(output, out_truth)
-        val_loss = torch.tensor([0])
+                val_loss += loss_fn(output, out_truth)
+            val_loss = val_loss/len(val_loader)
 
         if rank == 0:
             training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
