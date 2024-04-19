@@ -64,6 +64,7 @@ def demo_basic(rank, world_size=1):
     train_loader, val_loader, batch_size, output_normalizer, input_f_normalizer = get_dataset(dataset_args, ddp=False)
 
     loss_fn = LpLoss_custom()
+    loss_fn = nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), 
                                   betas=(0.9, 0.999), 
                                   lr=training_args['base_lr'],
@@ -97,7 +98,7 @@ def demo_basic(rank, world_size=1):
             train_loss = loss_fn(output, out_truth)
 
             # PDE Loss
-            if training_args['PDE_weight'] > 0 and epoch >= training_args['warmup_epochs']:
+            if training_args['PDE_weight'] > 0: # and epoch >= training_args['warmup_epochs']:
                 outputs, input_keys = output_realiser(output, in_keys, output_normalizer.to(rank), input_f_normalizer.to(rank), reverse_indices.to(rank))
                 Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=outputs, lid_velocity=input_keys, nu=0.01, L=1.0)
                 pde_loss_1 = loss_fn(Du_dx)
@@ -130,6 +131,11 @@ def demo_basic(rank, world_size=1):
         training_run_results.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
         training_run_results.update_loss({'Training L2 Loss': train_loss.item()})
         training_run_results.update_loss({'Evaluation L2 Loss': val_loss.item()})
+
+        if training_args['PDE_weight'] > 0:
+            training_run_results.update_loss({'X-Momentum': pde_loss_1.item()})
+            training_run_results.update_loss({'Y-Momentum': pde_loss_2.item()})
+            training_run_results.update_loss({'Continuity': pde_loss_3.item()})
 
         print(f"[Epoch{epoch}]: Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({rank}): {torch.cuda.memory_reserved(rank) / 1024**3:8.4f}GB ")
     

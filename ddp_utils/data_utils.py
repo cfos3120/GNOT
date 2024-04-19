@@ -393,8 +393,8 @@ def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L, pressure_overi
     return Du_dx, Dv_dy, continuity_eq, fdm_derivatives
 
 def output_realiser(model_output, model_input_key, output_normalizer, input_key_normalizer, reverse_indices=None):
-    output = model_output.clone()
-    input_key = model_input_key.clone()
+    output = model_output#.clone()
+    input_key = model_input_key#.clone()
 
     # rearrange (only makes a difference if input query coordinates was shuffled)
     if reverse_indices is not None:
