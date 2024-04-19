@@ -285,28 +285,42 @@ def get_model(args):
 
 ## FOR DDP:
 # this may need 'self.train_data.sampler.set_epoch(epoch)' at the start of each epoch
-def get_dataset(args):
-    world_size = dist.get_world_size()
+def get_dataset(args, ddp=True):
     train_set, output_normalizer, input_f_normalizer = get_cavity_dataset(args)
     args['train'] = False
     val_set,__,__ = get_cavity_dataset(args)
     
-    train_sampler = DistributedSampler(train_set,num_replicas=world_size)
-    val_sampler = DistributedSampler(val_set,num_replicas=world_size)
-    batch_size = int(args['batchsize'] / float(world_size))
-    
-    #print(world_size, batch_size)
-    
-    train_loader = DataLoader(
-        dataset=train_set,
-        sampler=train_sampler,
-        batch_size=batch_size
-    )
-    val_loader = DataLoader(
-        dataset=val_set,
-        sampler=val_sampler,
-        batch_size=batch_size
-    )
+    if ddp:
+        
+        world_size = dist.get_world_size()
+        train_sampler = DistributedSampler(train_set,num_replicas=world_size)
+        val_sampler = DistributedSampler(val_set,num_replicas=world_size)
+        batch_size = int(args['batchsize'] / float(world_size))
+        
+        #print(world_size, batch_size)
+        
+        train_loader = DataLoader(
+            dataset=train_set,
+            sampler=train_sampler,
+            batch_size=batch_size
+        )
+        val_loader = DataLoader(
+            dataset=val_set,
+            sampler=val_sampler,
+            batch_size=batch_size
+        )
+    else:
+        batch_size = args['batchsize']
+        train_loader = DataLoader(
+            dataset=train_set,
+            batch_size=batch_size,
+            shuffle=True
+        )
+        val_loader = DataLoader(
+            dataset=val_set,
+            batch_size=batch_size,
+            shuffle=False
+        )
 
     return train_loader, val_loader, batch_size, output_normalizer, input_f_normalizer
 
