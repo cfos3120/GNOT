@@ -20,7 +20,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 parser = ArgumentParser(description='GNOT Artemis Training Study')
 parser.add_argument('--name', type=str, default='test')
-#parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
+parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
 parser.add_argument('--epochs', type=int, default=1)
 parser.add_argument('--sub_x', type=int, default=4)
 parser.add_argument('--inference', type=str, default='True')
@@ -83,7 +83,7 @@ def demo_basic(rank, world_size):
     training_args['epochs']         = ARGS.epochs
     training_args["save_name"]      = ARGS.name
     training_args['PDE_weight']     = ARGS.pde_weight
-    dataset_args['file_path'] = '/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
+    dataset_args['file_path']       = ARGS.path #'/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
     train_loader, val_loader, batch_size, output_normalizer, input_f_normalizer = get_dataset(dataset_args)
 
