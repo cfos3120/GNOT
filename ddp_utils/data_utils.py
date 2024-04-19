@@ -391,8 +391,8 @@ def output_realiser(model_output, model_input_key, output_normalizer, input_key_
 
     # assuming isotropic grid:
     dim = int(np.sqrt(model_output.shape[1]))
-    batches = int(model_output.shape[0])
-    channels = batches = int(model_output.shape[-1])
+    batches = model_output.shape[0]
+    channels = model_output.shape[-1]
     output = output.reshape(batches, dim, dim, channels)
     return output, input_key
 
