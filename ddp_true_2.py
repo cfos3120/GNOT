@@ -31,6 +31,7 @@ parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--batch_size', type=int, default=4)
 parser.add_argument('--world_size', type=int, default=1)
 parser.add_argument('--pde_weight', type=float, default=0.0)
+parser.add_argument('--warm_up', type=int, default=5)
 global ARGS 
 ARGS = parser.parse_args()
 
@@ -57,6 +58,7 @@ def demo_basic(rank, world_size=1):
     training_args['epochs']         = ARGS.epochs
     training_args["save_name"]      = ARGS.name
     training_args['PDE_weight']     = ARGS.pde_weight
+    training_args['warmup_epochs']  = ARGS.warm_up
     dataset_args['file_path']       = ARGS.path #'/project/MLFluids/steady_cavity_case_b200_maxU100ms_simple_normalized.npy'
 
     train_loader, val_loader, batch_size, output_normalizer, input_f_normalizer = get_dataset(dataset_args, ddp=False)
@@ -95,7 +97,7 @@ def demo_basic(rank, world_size=1):
             train_loss = loss_fn(output, out_truth)
 
             # PDE Loss
-            if training_args['PDE_weight'] > 0:
+            if training_args['PDE_weight'] > 0 and epoch >= training_args['warmup_epochs']:
                 outputs, input_keys = output_realiser(output, in_keys, output_normalizer.to(rank), input_f_normalizer.to(rank), reverse_indices.to(rank))
                 Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=outputs, lid_velocity=input_keys, nu=0.01, L=1.0)
                 pde_loss_1 = loss_fn(Du_dx)
@@ -112,7 +114,8 @@ def demo_basic(rank, world_size=1):
                 #print(f'[Epoch{epoch}][Rank{rank}] Before mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()}')
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
             optimizer.step()
-            scheduler.step()
+            if epoch >= training_args['warmup_epochs']:
+                scheduler.step()
 
         epoch_end_time = default_timer()
 
