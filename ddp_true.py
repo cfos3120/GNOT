@@ -137,9 +137,9 @@ def demo_basic(rank, world_size):
                 pde_loss_2 = loss_fn(Dv_dy)
                 pde_loss_3 = loss_fn(continuity_eq)
                 pde_loss = (pde_loss_1 + pde_loss_2 + pde_loss_3)/3
-                total_loss = train_loss + training_args['PDE_weight']*pde_loss
+                total_loss = 5*train_loss + pde_loss
             else:
-                total_loss = train_loss
+                total_loss = 5*train_loss
 
             total_loss.backward()
             #if rank == 0: 
