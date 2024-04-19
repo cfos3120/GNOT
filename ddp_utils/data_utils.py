@@ -289,7 +289,7 @@ def get_dataset(args):
     world_size = dist.get_world_size()
     train_set, output_normalizer, input_f_normalizer = get_cavity_dataset(args)
     args['train'] = False
-    val_set = get_cavity_dataset(args)
+    val_set,__,__ = get_cavity_dataset(args)
     
     train_sampler = DistributedSampler(train_set,num_replicas=world_size)
     val_sampler = DistributedSampler(val_set,num_replicas=world_size)
