@@ -153,7 +153,7 @@ def demo_basic(rank, world_size):
 
         dist.barrier()
         with torch.no_grad():
-            for in_queries, in_keys, out_truth in val_loader:
+            for in_queries, in_keys, out_truth,__ in val_loader:
                 in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
                 output = ddp_model(x=in_queries,inputs = in_keys)
                 val_loss = loss_fn(output, out_truth)
