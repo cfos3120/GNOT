@@ -131,7 +131,7 @@ def demo_basic(rank, world_size):
 
             # PDE Loss
             if training_args['PDE_weight'] > 0:
-                outputs, input_keys = output_realiser(output, in_keys, output_normalizer, input_f_normalizer, reverse_indices)
+                outputs, input_keys = output_realiser(output, in_keys, output_normalizer.to(rank), input_f_normalizer.to(rank), reverse_indices.to(rank))
                 Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=outputs, lid_velocity=input_keys, nu=0.01, L=1.0)
                 pde_loss_1 = loss_fn(Du_dx)
                 pde_loss_2 = loss_fn(Dv_dy)
