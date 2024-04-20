@@ -89,7 +89,8 @@ def demo_basic(rank, world_size=1):
     for epoch in range(training_args['epochs']):
         torch.cuda.empty_cache()
         epoch_start_time = default_timer()
-        for in_queries, in_keys, out_truth, reverse_indices in train_loader:
+        for batch_n, batch in enumerate(train_loader):
+            in_queries, in_keys, out_truth, reverse_indices = batch
             in_queries, in_keys, out_truth = in_queries.to(rank), in_keys.to(rank), out_truth.to(rank)
             optimizer.zero_grad()
             output = model(x=in_queries,inputs = in_keys)
@@ -108,11 +109,17 @@ def demo_basic(rank, world_size=1):
                 total_loss = train_loss + training_args['PDE_weight']*pde_loss
             else:
                 total_loss = train_loss
+                pde_loss_1 = torch.tensor([0])
+                pde_loss_2 = torch.tensor([0])
+                pde_loss_3 = torch.tensor([0])
 
             total_loss.backward()
             #if rank == 0: 
-                #nan_flag, inf_flag = check_gradients(model)
-                #print(f'[Epoch{epoch}][Rank{rank}] Before mean(grad): Loss: {train_loss.item():7.4f} LR:{scheduler.get_lr()} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()}')
+            nan_flag, inf_flag = check_gradients(model)
+            print(f'[Epoch{epoch:4.0f}][Batch{batch_n:2.0f}] Before mean(grad): Loss: {train_loss.item():7.4f} ' +
+                  f'LR:{scheduler.get_lr()[0]:7.6f} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()} '+
+                  f'PDE Losses: {pde_loss_1.item():7.4f}|{pde_loss_2.item():7.4f}|{pde_loss_3.item():7.4f}')
+            
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
             optimizer.step()
             #if epoch >= training_args['warmup_epochs']:
@@ -137,7 +144,7 @@ def demo_basic(rank, world_size=1):
             training_run_results.update_loss({'Y-Momentum': pde_loss_2.item()})
             training_run_results.update_loss({'Continuity': pde_loss_3.item()})
 
-        print(f"[Epoch{epoch}]: Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({rank}): {torch.cuda.memory_reserved(rank) / 1024**3:8.4f}GB ")
+        #print(f"[Epoch{epoch}]: Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({rank}): {torch.cuda.memory_reserved(rank) / 1024**3:8.4f}GB ")
     
     save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
 
