@@ -119,12 +119,14 @@ def demo_basic(rank, world_size=1):
 
             total_loss.backward()
             #if rank == 0: 
-            nan_flag, inf_flag = check_gradients(model)
-            print(f'[Epoch{epoch:4.0f}][Batch{batch_n:2.0f}] Before mean(grad): Total Loss: {total_loss.item():7.4f} ' +
-                  f'LR:{scheduler.get_lr()[0]:7.6f} NaN Grads: {nan_flag} Inf Grads: {inf_flag} Model Output NaNs: {output.isnan().any()} '+
-                  f'|Loss: {train_loss.item():7.4f} | PDE Losses: {pde_loss_1.item():7.4f}|{pde_loss_2.item():7.4f}|{pde_loss_3.item():7.4f}')
+            nan_flag, inf_flag, total_norm = check_gradients(model)
             
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
+            __,__, total_norm_clipped = check_gradients(model)
+            print(f'[E {epoch:4.0f}][B {batch_n:2.0f}]: Total Loss: {total_loss.item():14.4f} ' +
+                  f'LR:{scheduler.get_lr()[0]:7.6f} |NaN Grads: {nan_flag} Max Grad: {total_norm:16.0f} Max Grad (after clip): {total_norm_clipped:16.0f}|'+
+                  f'|Loss: {train_loss.item():10.4f} | PDE Losses: {pde_loss_1.item():7.1f}|{pde_loss_2.item():7.1f}|{pde_loss_3.item():7.1f}')
+            
             optimizer.step()
             #if epoch >= training_args['warmup_epochs']:
             scheduler.step()
