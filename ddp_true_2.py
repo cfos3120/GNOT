@@ -38,13 +38,17 @@ ARGS = parser.parse_args()
 def check_gradients(model):
     nan_flag = False
     inf_flag = False
+
+    # maximum gradient
+    total_norm = torch.max(torch.stack([p.grad.detach().abs().max() for p in model.parameters()]))
+
     for param in model.parameters():
         if param.grad.data.isnan().any():
             nan_flag = True
         if param.grad.data.isfinite().any():
             inf_flag = True
     
-    return nan_flag, inf_flag
+    return nan_flag, inf_flag, total_norm
 
 def demo_basic(rank, world_size=1):
     print(f"Running basic Single Processor example on rank {rank}.")
