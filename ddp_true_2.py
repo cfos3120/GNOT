@@ -121,7 +121,7 @@ def demo_basic(rank, world_size=1):
             #if rank == 0: 
             nan_flag, inf_flag, total_norm = check_gradients(model)
             
-            #torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
+            torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
             __,__, total_norm_clipped = check_gradients(model)
             print(f'[E {epoch:4.0f}][B {batch_n:2.0f}]: Total Loss: {total_loss.item():14.4f} ' +
                   f'LR:{scheduler.get_lr()[0]:7.6f} |NaN Grads: {nan_flag} Max Grad: {total_norm:16.0f} Max Grad (after clip): {total_norm_clipped:16.0f}|'+
