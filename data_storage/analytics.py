@@ -270,7 +270,7 @@ def ansatz_heat_map(prediction, ground_truth, lid_v):
 
     line_grid = np.arange(prediction.shape[1])/(prediction.shape[1]-1)
 
-    fig = make_subplots(rows=1,cols=4, subplot_titles=('Ground Truth', 'Ansatz', ' Difference'))
+    fig = make_subplots(rows=1,cols=3, subplot_titles=('Ground Truth', 'Ansatz', ' Difference'))
     for i in range(3):
         if i == 0: visible = True 
         else: visible = False
@@ -514,6 +514,59 @@ def fine_PDE_heat_map(ansatz_prediction, fine_prediction, ground_truth, lid_v):
                         args=[{"visible": [False, False, False, False, False,
                                             False, False, False, False, False,
                                             True, True, True, True, True]},
+                            {"title": f"Continuity with real lid velocity = {lid_v:.2f}m/s", 
+                                }]),
+                ]), 
+            ) 
+        ]) 
+    
+    fig.update_layout(coloraxis = {'colorscale':'RdBu', 'cmid': 0, 'reversescale': True, 'colorbar_x':-0.15}, title = f"Results with lid velocity = {lid_v:.2f}m/s")
+    fig.show()
+    return fig
+
+def PDE_heat_map(ansatz_prediction, ground_truth, lid_v):
+    batch = 0
+
+    line_grid = np.arange(ground_truth.shape[1])/(ground_truth.shape[1]-1)
+
+    Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=ansatz_prediction, lid_velocity=torch.tensor([lid_v]), nu=0.01, L=0.1)
+    ansatz_pde_prediction = [Du_dx, Dv_dy, continuity_eq]
+    Du_dx, Dv_dy, continuity_eq,__ = NS_FDM_cavity_internal_vertex_non_dim(U=ground_truth, lid_velocity=torch.tensor([lid_v]), nu=0.01, L=0.1)
+    ground_pde_prediction = [Du_dx, Dv_dy, continuity_eq]
+
+    fig = make_subplots(rows=1,cols=3, subplot_titles=('Ground Truth', 'Ansatz', 'Difference'))
+    for i in range(3):
+        if i == 0: visible = True 
+        else: visible = False
+        fig.add_trace(go.Heatmap(z=ground_pde_prediction[i][batch, ...], x=line_grid, y=line_grid, showscale=False, connectgaps=True, coloraxis = "coloraxis", visible=visible),1,1)
+        fig.add_trace(go.Heatmap(z=ansatz_pde_prediction[i][batch, ...], x=line_grid, y=line_grid, showscale=False, connectgaps=True, coloraxis = "coloraxis", visible=visible),1,2)
+        fig.add_trace(go.Heatmap(z=(ground_pde_prediction[i]-ansatz_pde_prediction[i])[batch, ...], x=line_grid, y=line_grid, showscale=False, connectgaps=True, coloraxis = "coloraxis", visible=visible),1,3)
+        # Add dropdown 
+
+    fig.update_layout( 
+        updatemenus=[ 
+            dict( 
+                active=0, 
+                buttons=list([ 
+                    dict(label="U-Velocity", 
+                        method="update", 
+                        args=[{"visible": [True, True, True,
+                                            False, False, False,
+                                            False, False, False]}, 
+                            {"title": f"X-Momentum with real lid velocity = {lid_v:.2f}m/s", 
+                                }]), 
+                    dict(label="V-Velocity", 
+                        method="update", 
+                        args=[{"visible": [False, False, False,
+                                           True, True, True,
+                                            False, False, False]},
+                            {"title": f"Y-Momentum with real lid velocity = {lid_v:.2f}m/s", 
+                                }]), 
+                    dict(label="Pressure", 
+                        method="update", 
+                        args=[{"visible": [False, False, False,
+                                            False, False, False,
+                                            True, True, True]},
                             {"title": f"Continuity with real lid velocity = {lid_v:.2f}m/s", 
                                 }]),
                 ]), 
