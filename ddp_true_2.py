@@ -156,8 +156,9 @@ def demo_basic(rank, world_size=1):
     save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
 
     try:
-        shutil.copyfile(f'/{training_args["save_dir"]}/{training_args["save_name"]}.pt'         , '/content/drive/MyDrive/Results/')
-        shutil.copyfile(f'/{training_args["save_dir"]}/{training_args["save_name"]}_results.pt' , '/content/drive/MyDrive/Results/')
+        shutil.copyfile(f'/{training_args["save_dir"]}/{training_args["save_name"]}.pt'         , f'/content/drive/MyDrive/Results/{training_args["save_name"]}.pt')
+        shutil.copyfile(f'/{training_args["save_dir"]}/{training_args["save_name"]}_results.pt' , f'/content/drive/MyDrive/Results/{training_args["save_name"]}_results.pt')
+        print('saved to Google Drive directory')
     except:
         pass
 
