@@ -3,6 +3,7 @@ import numpy as np
 import math
 from timeit import default_timer
 from argparse import ArgumentParser
+import shutil
 
 from data_storage.loss_recording import total_model_dict, save_checkpoint
 from ddp_utils.data_utils import *
@@ -153,6 +154,12 @@ def demo_basic(rank, world_size=1):
         #print(f"[Epoch{epoch}]: Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({rank}): {torch.cuda.memory_reserved(rank) / 1024**3:8.4f}GB ")
     
     save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
+
+    try:
+        shutil.copyfile(f'/{training_args["save_dir"]}/{training_args["save_name"]}.pt'         , '/content/drive/MyDrive/Results/')
+        shutil.copyfile(f'/{training_args["save_dir"]}/{training_args["save_name"]}_results.pt' , '/content/drive/MyDrive/Results/')
+    except:
+        pass
 
 if __name__ == "__main__":
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
