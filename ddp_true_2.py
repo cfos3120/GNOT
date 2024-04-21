@@ -157,7 +157,7 @@ def demo_basic(rank, world_size=1):
 
     try:
         shutil.copyfile(f'checkpoints/{training_args["save_dir"]}/{training_args["save_name"]}.pt'         , f'/content/drive/MyDrive/Results/{training_args["save_name"]}.pt')
-        shutil.copyfile(f'checkpoints/{training_args["save_dir"]}/{training_args["save_name"]}_results.pt' , f'/content/drive/MyDrive/Results/{training_args["save_name"]}_results.pt')
+        shutil.copyfile(f'checkpoints/{training_args["save_dir"]}/{training_args["save_name"]}_results.npy' , f'/content/drive/MyDrive/Results/{training_args["save_name"]}_results.pt')
         print('saved to Google Drive directory')
     except:
         pass
