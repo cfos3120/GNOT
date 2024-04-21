@@ -124,9 +124,9 @@ def demo_basic(rank, world_size=1):
             
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
             __,__, total_norm_clipped = check_gradients(model)
-            print(f'[E {epoch:4.0f}][B {batch_n:2.0f}]: Total Loss: {total_loss.item():14.4f} ' +
-                  f'LR:{scheduler.get_lr()[0]:7.6f} |NaN Grads: {nan_flag} Max Grad: {total_norm:16.0f} Max Grad (after clip): {total_norm_clipped:16.0f}|'+
-                  f'|Loss: {train_loss.item():10.4f} | PDE Losses: {pde_loss_1.item():7.1f}|{pde_loss_2.item():7.1f}|{pde_loss_3.item():7.1f}')
+            # print(f'[E {epoch:4.0f}][B {batch_n:2.0f}]: Total Loss: {total_loss.item():14.4f} ' +
+            #       f'LR:{scheduler.get_lr()[0]:7.6f} |NaN Grads: {nan_flag} Max Grad: {total_norm:16.0f} Max Grad (after clip): {total_norm_clipped:16.0f}|'+
+            #       f'|Loss: {train_loss.item():10.4f} | PDE Losses: {pde_loss_1.item():7.1f}|{pde_loss_2.item():7.1f}|{pde_loss_3.item():7.1f}')
             
             optimizer.step()
             #if epoch >= training_args['warmup_epochs']:
@@ -151,7 +151,7 @@ def demo_basic(rank, world_size=1):
             training_run_results.update_loss({'Y-Momentum': pde_loss_2.item()})
             training_run_results.update_loss({'Continuity': pde_loss_3.item()})
 
-        #print(f"[Epoch{epoch}]: Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({rank}): {torch.cuda.memory_reserved(rank) / 1024**3:8.4f}GB ")
+        print(f"[Epoch{epoch}]: Training/Validation Loss on Rank {rank} is {train_loss.item():7.4f}/{val_loss.item():7.4f} with memory reserved ({rank}): {torch.cuda.memory_reserved(rank) / 1024**3:8.4f}GB ")
     
     save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
 
