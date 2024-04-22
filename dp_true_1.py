@@ -63,6 +63,7 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
         torch.cuda.empty_cache()
         model.train()
         epoch_start_time = default_timer()
+        mean_train_loss = 0
         for in_queries, in_keys, out_truth, reverse_indices in train_loader:
             optimizer.zero_grad()
             in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
@@ -70,16 +71,18 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
 
             # Pointwise Loss
             train_loss = loss_fn(output, out_truth)
+            mean_train_loss += train_loss.item()
 
             train_loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
             optimizer.step()
             scheduler.step()
 
+        mean_train_loss = mean_train_loss/len(train_loader)
         epoch_end_time = default_timer()
 
         recorder.update_loss({'Epoch Time': epoch_end_time - epoch_start_time})
-        recorder.update_loss({'Training L2 Loss': train_loss.item()})
+        recorder.update_loss({'Training L2 Loss': mean_train_loss})
 
         if eval_loader is not None:
             val_loss = validation(model, eval_loader)
@@ -90,7 +93,7 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
 
         if epoch == 0: cuda_get_all_memory_reserved()
 
-        print(f"[Epoch{epoch}]: Train/Val Loss {train_loss.item():7.4f}/{val_loss:7.4f}")
+        print(f"[Epoch{epoch}]: Train/Val Loss {mean_train_loss:7.4f}/{val_loss:7.4f}")
     
     print('Training Complete')
     save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
