@@ -44,11 +44,12 @@ ARGS = parser.parse_args()
 
 def validation(model, dataloader):
     #device = model.get_device()
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.eval()
     with torch.no_grad():
         val_loss = 0
         for in_queries, in_keys, out_truth,__ in dataloader:
-            #in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
+            in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
             output = model(x=in_queries,inputs = in_keys)
             val_loss += loss_fn(output, out_truth).item()
         val_loss = val_loss/len(dataloader)
@@ -57,13 +58,14 @@ def validation(model, dataloader):
 def train_model(model, train_loader, training_args, loss_fn, recorder, eval_loader=None):
     
     #device = model.get_device()
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     for epoch in range(training_args['epochs']):
         torch.cuda.empty_cache()
         model.train()
         epoch_start_time = default_timer()
         for in_queries, in_keys, out_truth, reverse_indices in train_loader:
             optimizer.zero_grad()
-            #in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
+            in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
             output = model(x=in_queries, inputs=in_keys)
 
             # Pointwise Loss
