@@ -439,7 +439,7 @@ if __name__ == '__main__':
         for batch_n, batch in enumerate(train_dataloader):
             optimizer.zero_grad()
 
-            #in_queries, in_keys, out_truth = batch
+            in_queries, in_keys, out_truth = batch
             in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
             
             out = model(x=in_queries,inputs = in_keys)
