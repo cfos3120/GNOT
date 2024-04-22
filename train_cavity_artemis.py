@@ -319,7 +319,7 @@ if __name__ == '__main__':
     parser.add_argument('--path', type=str, default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
     parser.add_argument('--epochs', type=int, default=1)
     parser.add_argument('--sub_x', type=int, default=4)
-    parser.add_argument('--theta', type=bool, default=True)
+    parser.add_argument('--theta', type=bool, default=False)
     
     args = parser.parse_args()
 
