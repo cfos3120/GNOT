@@ -26,6 +26,11 @@ from torch.distributed.optim import ZeroRedundancyOptimizer
 
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+torch.manual_seed(42)
+torch.cuda.manual_seed(42)
+np.random.seed(42)
+torch.cuda.manual_seed_all(42)
+
 parser = ArgumentParser(description='GNOT Artemis Training Study')
 parser.add_argument('--name'        , type=str  , default='test')
 parser.add_argument('--path'        , type=str  , default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
@@ -102,6 +107,7 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
 
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    seed_generator = torch.Generator().manual_seed(42)
 
     # Get Args
     dataset_args, model_args, training_args = get_default_args()
@@ -130,7 +136,8 @@ if __name__ == "__main__":
     train_loader = DataLoader(
             dataset=train_torch_dataset,
             batch_size=dataset_args['batchsize'],
-            shuffle=True
+            shuffle=True,
+            generator=seed_generator
         )
     val_loader = DataLoader(
             dataset=val_torch_dataset,
