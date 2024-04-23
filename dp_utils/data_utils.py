@@ -191,6 +191,7 @@ def prepare_dataset(args):
                                                 sub_x=args['sub_x'], 
                                                 normalize_y=args['normalize_y'], 
                                                 normalize_x=args['normalize_x'], 
+                                                normalize_f=args['normalize_f'], 
                                                 vertex=args['vertex'], 
                                                 boundaries=args['boundaries']
                                                 )
