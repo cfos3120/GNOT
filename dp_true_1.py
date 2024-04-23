@@ -106,7 +106,12 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
     print('Training Complete')
     save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
 
-
+    try:
+        shutil.copyfile(f'checkpoints/{training_args["save_dir"]}/{training_args["save_name"]}.pt'         , f'/content/drive/MyDrive/Results/{training_args["save_name"]}.pt')
+        shutil.copyfile(f'checkpoints/{training_args["save_dir"]}/{training_args["save_name"]}_results.npy' , f'/content/drive/MyDrive/Results/{training_args["save_name"]}_results.pt')
+        print('saved to Google Drive directory')
+    except:
+        pass
 
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
