@@ -26,10 +26,7 @@ from torch.distributed.optim import ZeroRedundancyOptimizer
 
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-torch.manual_seed(42)
-torch.cuda.manual_seed(42)
-np.random.seed(42)
-torch.cuda.manual_seed_all(42)
+
 
 parser = ArgumentParser(description='GNOT Artemis Training Study')
 parser.add_argument('--name'        , type=str  , default='test')
@@ -46,6 +43,11 @@ parser.add_argument('--rand_cood'   , type=int  , default=0)
 parser.add_argument('--normalize_f' , type=int  , default=0)
 global ARGS 
 ARGS = parser.parse_args()
+
+torch.manual_seed(ARGS.seed)
+torch.cuda.manual_seed(ARGS.seed)
+np.random.seed(ARGS.seed)
+torch.cuda.manual_seed_all(ARGS.seed)
 
 def validation(model, dataloader):
     #device = model.get_device()
