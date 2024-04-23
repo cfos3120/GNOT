@@ -41,6 +41,7 @@ parser.add_argument('--lr'          , type=float, default=0.001)
 parser.add_argument('--batch_size'  , type=int  , default=4)
 parser.add_argument('--rand_cood'   , type=int  , default=0)
 parser.add_argument('--normalize_f' , type=int  , default=0)
+parser.add_argument('--DDP'         , type=int  , default=0)
 global ARGS 
 ARGS = parser.parse_args()
 
@@ -122,6 +123,7 @@ if __name__ == "__main__":
     dataset_args['file_path']       = ARGS.path
     dataset_args['random_coords']   = ARGS.rand_cood == 1
     dataset_args['normalize_f']     = ARGS.normalize_f == 1
+    training_args['DDP']            = ARGS.DDP == 1
 
     # Dataset Creation
     dataset = prepare_dataset(dataset_args)
@@ -149,7 +151,9 @@ if __name__ == "__main__":
     
     # Model Setup
     model = get_model(model_args)
-    model = nn.DataParallel(model).to(device)
+    if ARGS.DDP:
+        model = nn.DataParallel(model)
+    model = model.to(device)
 
     # Training Settings:
     loss_fn = LpLoss_custom()
