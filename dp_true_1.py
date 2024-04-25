@@ -22,7 +22,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim as optim
-from models.optimizer import Adam
+from models.optimizer import Adam, AdamW
 from torch.distributed.optim import ZeroRedundancyOptimizer
 
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -42,7 +42,8 @@ parser.add_argument('--lr'          , type=float, default=0.001)
 parser.add_argument('--batch_size'  , type=int  , default=4)
 parser.add_argument('--rand_cood'   , type=int  , default=0)
 parser.add_argument('--normalize_f' , type=int  , default=0)
-parser.add_argument('--DP'         , type=int  , default=0)
+parser.add_argument('--DP'          , type=int  , default=0)
+parser.add_argument('--Optim'       , type=str  , default='Adamw')
 global ARGS 
 ARGS = parser.parse_args()
 
@@ -164,12 +165,32 @@ if __name__ == "__main__":
     # Training Settings:
     loss_fn = LpLoss_custom()
 
-    #torch.optim.AdamW
-    optimizer = Adam(model.parameters(), 
-                    betas=(0.9, 0.999), 
-                    lr=training_args['base_lr'],
-                    weight_decay=training_args['weight-decay']
-                    )
+    if ARGS.Optim == 'Adamw':
+        optimizer = torch.optim.AdamW(model.parameters(), 
+                                    betas=(0.9, 0.999), 
+                                    lr=training_args['base_lr'],
+                                    weight_decay=training_args['weight-decay']
+                                    )
+    elif ARGS.Optim == 'Adamw_custom':
+        optimizer = AdamW(model.parameters(), 
+                        betas=(0.9, 0.999), 
+                        lr=training_args['base_lr'],
+                        weight_decay=training_args['weight-decay']
+                        )
+    elif ARGS.Optim == 'Adam':
+        optimizer = torch.optim.Adam(model.parameters(), 
+                                    betas=(0.9, 0.999), 
+                                    lr=training_args['base_lr'],
+                                    weight_decay=training_args['weight-decay']
+                                    )
+    elif ARGS.Optim == 'Adam_custom':
+        optimizer = Adam(model.parameters(), 
+                        betas=(0.9, 0.999), 
+                        lr=training_args['base_lr'],
+                        weight_decay=training_args['weight-decay']
+                        )
+    else:
+        raise NotImplementedError
     
     scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
                                                     max_lr=training_args['base_lr'], 
