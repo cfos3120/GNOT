@@ -22,6 +22,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim as optim
+from models.optimizer import Adam
 from torch.distributed.optim import ZeroRedundancyOptimizer
 
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -108,7 +109,7 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
 
     try:
         shutil.copyfile(f'checkpoints/{training_args["save_dir"]}/{training_args["save_name"]}.pt'         , f'/content/drive/MyDrive/Results/{training_args["save_name"]}.pt')
-        shutil.copyfile(f'checkpoints/{training_args["save_dir"]}/{training_args["save_name"]}_results.npy' , f'/content/drive/MyDrive/Results/{training_args["save_name"]}_results.pt')
+        shutil.copyfile(f'checkpoints/{training_args["save_dir"]}/{training_args["save_name"]}_results.npy' , f'/content/drive/MyDrive/Results/{training_args["save_name"]}_results.npy')
         print('saved to Google Drive directory')
     except:
         pass
@@ -163,11 +164,12 @@ if __name__ == "__main__":
     # Training Settings:
     loss_fn = LpLoss_custom()
 
-    optimizer = torch.optim.AdamW(model.parameters(), 
-                                  betas=(0.9, 0.999), 
-                                  lr=training_args['base_lr'],
-                                  weight_decay=training_args['weight-decay']
-                                  )
+    #torch.optim.AdamW
+    optimizer = Adam(model.parameters(), 
+                    betas=(0.9, 0.999), 
+                    lr=training_args['base_lr'],
+                    weight_decay=training_args['weight-decay']
+                    )
     
     scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
                                                     max_lr=training_args['base_lr'], 
