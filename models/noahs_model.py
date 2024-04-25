@@ -274,7 +274,7 @@ class CGPTNO(nn.Module):
 
         self.out_mlp = MLP(n_hidden, n_hidden, output_size, n_layers=mlp_layers)
 
-        # self.apply(self._init_weights)
+        self.apply(self._init_weights)
 
         self.__name__ = 'CGPT'
 
