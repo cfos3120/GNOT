@@ -26,7 +26,7 @@ from models.optimizer import Adam, AdamW
 from torch.distributed.optim import ZeroRedundancyOptimizer
 
 from torch.nn.parallel import DistributedDataParallel as DDP
-torch.backends.cuda.matmul.allow_tf32 = False
+#torch.backends.cuda.matmul.allow_tf32 = False
 
 
 
@@ -163,6 +163,9 @@ if __name__ == "__main__":
     
     # Model Setup
     model = get_model(model_args)
+    model_optimizer = model.configure_optimizers(betas=(0.9, 0.999), 
+                                                lr=training_args['base_lr'],
+                                                weight_decay=training_args['weight-decay'])
     if ARGS.DP:
         model = nn.DataParallel(model)
     model = model.to(device)
@@ -196,9 +199,7 @@ if __name__ == "__main__":
                         weight_decay=training_args['weight-decay']
                         )
     elif ARGS.Optim == 'mode':
-        optimizer = model.configure_optimizers(betas=(0.9, 0.999), 
-                                                lr=training_args['base_lr'],
-                                                weight_decay=training_args['weight-decay'])
+        optimizer = model_optimizer
     else:
         raise NotImplementedError
     
