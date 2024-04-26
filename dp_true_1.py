@@ -167,7 +167,8 @@ if __name__ == "__main__":
     model = model.to(device)
 
     # Training Settings:
-    loss_fn = LpLoss_custom()
+    #loss_fn = LpLoss_custom()
+    loss_fn = torch.nn.MSELoss()
 
     if ARGS.Optim == 'Adamw':
         optimizer = torch.optim.AdamW(model.parameters(), 
