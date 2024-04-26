@@ -283,7 +283,7 @@ class CGPTNO(nn.Module):
     def _init_weights(self, module):
         if isinstance(module, (nn.Linear, nn.Embedding)):
             #module.weight.data.normal_(mean=0.0, std=0.0002)
-            torch.nn.init.xavier_normal_(module.weight.data, gain=1.0, generator=torch.Generator().manual_seed(42))
+            torch.nn.init.xavier_normal_(module.weight.data, gain=1.0)
             if isinstance(module, nn.Linear) and module.bias is not None:
                 module.bias.data.zero_()
         elif isinstance(module, nn.LayerNorm):
