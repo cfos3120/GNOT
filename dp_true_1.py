@@ -85,7 +85,7 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
                 train_loss = loss_fn(output, out_truth)
                 mean_train_loss += train_loss.item()
 
-                if train_loss.isnan(): raise ValueError('training loss is nan')
+                #if train_loss.isnan(): raise ValueError('training loss is nan')
 
                 train_loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
