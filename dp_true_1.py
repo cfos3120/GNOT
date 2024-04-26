@@ -167,8 +167,8 @@ if __name__ == "__main__":
     model = model.to(device)
 
     # Training Settings:
-    #loss_fn = LpLoss_custom()
-    loss_fn = torch.nn.MSELoss()
+    loss_fn = LpLoss_custom()
+    #loss_fn = torch.nn.MSELoss()
 
     if ARGS.Optim == 'Adamw':
         optimizer = torch.optim.AdamW(model.parameters(), 
@@ -194,6 +194,10 @@ if __name__ == "__main__":
                         lr=training_args['base_lr'],
                         weight_decay=training_args['weight-decay']
                         )
+    elif ARGS.Optim == 'mode':
+        optimizer = model.configure_optimizers(betas=(0.9, 0.999), 
+                                                lr=training_args['base_lr'],
+                                                weight_decay=training_args['weight-decay'])
     else:
         raise NotImplementedError
     
