@@ -79,19 +79,19 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
             optimizer.zero_grad()
             in_queries, in_keys, out_truth = in_queries.to(device), in_keys.to(device), out_truth.to(device)
 
-            with torch.autograd.detect_anomaly():
-                output = model(x=in_queries, inputs=in_keys)
+            #with torch.autograd.detect_anomaly():
+            output = model(x=in_queries, inputs=in_keys)
 
-                # Pointwise Loss
-                train_loss = loss_fn(output, out_truth)
-                mean_train_loss += train_loss.item()
+            # Pointwise Loss
+            train_loss = loss_fn(output, out_truth)
+            mean_train_loss += train_loss.item()
 
-                #if train_loss.isnan(): raise ValueError('training loss is nan')
+            #if train_loss.isnan(): raise ValueError('training loss is nan')
 
-                train_loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
-                optimizer.step()
-                scheduler.step()
+            train_loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
+            optimizer.step()
+            scheduler.step()
 
         mean_train_loss = mean_train_loss/len(train_loader)
         epoch_end_time = default_timer()
