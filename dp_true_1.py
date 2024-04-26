@@ -26,6 +26,7 @@ from models.optimizer import Adam, AdamW
 from torch.distributed.optim import ZeroRedundancyOptimizer
 
 from torch.nn.parallel import DistributedDataParallel as DDP
+torch.backends.cuda.matmul.allow_tf32 = False
 
 
 
