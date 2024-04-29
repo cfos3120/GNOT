@@ -161,6 +161,8 @@ if __name__ == "__main__":
             shuffle=False
         )
     
+    print(f'Number of Training/Validation Batches: {len(train_loader)}/{len(val_loader)}')
+    
     # Model Setup
     model = get_model(model_args)
     if ARGS.DP:
