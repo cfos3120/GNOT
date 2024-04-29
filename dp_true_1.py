@@ -163,9 +163,6 @@ if __name__ == "__main__":
     
     # Model Setup
     model = get_model(model_args)
-    model_optimizer = model.configure_optimizers(betas=(0.9, 0.999), 
-                                                lr=training_args['base_lr'],
-                                                weight_decay=training_args['weight-decay'])
     if ARGS.DP:
         model = nn.DataParallel(model)
     model = model.to(device)
@@ -198,8 +195,6 @@ if __name__ == "__main__":
                         lr=training_args['base_lr'],
                         weight_decay=training_args['weight-decay']
                         )
-    elif ARGS.Optim == 'mode':
-        optimizer = model_optimizer
     else:
         raise NotImplementedError
     
