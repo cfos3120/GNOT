@@ -21,6 +21,7 @@ print('model_loaded and set to eval')
 mean_time = 0
 
 for i in range(ARGS.iters):
+    torch.cuda.empty_cache()
     input_1 = torch.rand(1,ARGS.res**2,2).to(device)
     input_2 = torch.rand(1,1,1).to(device)
 
