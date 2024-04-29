@@ -45,4 +45,4 @@ for i in range(ARGS.iters):
 
 mean_time = mean_time/(ARGS.iters)
 
-print(f'Mean Inference time (over {ARGS.iters} iterations) for Resolution ({ARGS.res}x{ARGS.res}): {mean_time:.6f}')
+print(f'Mean Inference time (over {ARGS.iters} iterations) for Resolution ({ARGS.res}^{ARGS.dims}): {mean_time:.6f}')
