@@ -57,16 +57,22 @@ class Cavity_2D_dataset_for_GNOT():
             self.query_normalizer = self.create_a_normalizer(self.queries)
             self.queries = self.query_normalizer.transform(self.queries, inverse=False)
             print(f'    Queries Normalized with Means: {self.query_normalizer.mean} and Stds: {self.query_normalizer.std}')
+        else:
+            self.query_normalizer = None
             
         if self.normalize_y:
             self.output_normalizer = self.create_a_normalizer(self.data_out)
             self.data_out = self.output_normalizer.transform(self.data_out, inverse=False)
             print(f'    Datset Normalized with Means: {self.output_normalizer.mean} and Stds: {self.output_normalizer.std}')
+        else:
+            self.output_normalizer = None
         
         if self.normalize_f:
             self.input_f_normalizer = UnitTransformer(self.data_lid_v)
             self.data_lid_v = self.input_f_normalizer.transform(self.data_lid_v, inverse=False)
             print(f'    Keys Normalized with Means: {self.input_f_normalizer.mean} and Stds: {self.input_f_normalizer.std}')
+        else:
+            self.input_f_normalizer = None
         
         self.__update_dataset_config()
 
@@ -305,3 +311,88 @@ def cuda_get_all_memory_reserved():
         string = '\n| No GPUs Available |\n'
 
     print(string)
+
+def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L, pressure_overide=False):
+
+    # with boundary conditions
+
+    batchsize = U.size(0)
+    nx = U.size(1)
+    ny = U.size(2)
+    
+    device = U.device
+
+    # assign Reynolds Number array:
+    Re = (lid_velocity * L/nu).repeat(1,nx-2,ny-2)
+
+    # create isotropic grid (non-dimensional i.e. L=1.0)
+    y = torch.tensor(np.linspace(0.0, 1.0, nx), dtype=torch.float, device=device)
+    x = y
+
+    # initialize Storage of derivatives as zeros
+    ux = torch.zeros([batchsize, nx-2, ny-2])
+    uy = torch.zeros_like(ux)
+    vx = torch.zeros_like(ux)
+    vy = torch.zeros_like(ux)
+    uxx = torch.zeros_like(ux)
+    uyy = torch.zeros_like(ux)
+    vxx = torch.zeros_like(ux)
+    vyy = torch.zeros_like(ux)
+    px = torch.zeros_like(ux)
+    py = torch.zeros_like(ux)
+    
+    # second order first derivative scheme
+    dx = abs(x[1]-x[0])
+    dy = dx
+       
+    u = torch.zeros([batchsize, nx-2, ny-2])
+    v = torch.zeros_like(u)
+    p = torch.zeros_like(u)
+    
+    # assign internal field
+    u = U[...,0]
+    v = U[...,1]
+    p = U[...,2]
+
+    if pressure_overide:
+        p = (u**2 + v**2)*1/2           #density is one
+        
+    # gradients in internal zone
+    uy  = (u[:, 2:  , 1:-1] -   u[:,  :-2, 1:-1]) / (2*dy)
+    ux  = (u[:, 1:-1, 2:  ] -   u[:, 1:-1,  :-2]) / (2*dx)
+    uyy = (u[:, 2:  , 1:-1] - 2*u[:, 1:-1, 1:-1] + u[:,  :-2, 1:-1]) / (dy**2)
+    uxx = (u[:, 1:-1, 2:  ] - 2*u[:, 1:-1, 1:-1] + u[:, 1:-1,  :-2]) / (dx**2)
+
+    vy  = (v[:, 2:  , 1:-1] -   v[:,  :-2, 1:-1]) / (2*dy)
+    vx  = (v[:, 1:-1, 2:  ] -   v[:, 1:-1,  :-2]) / (2*dx)
+    vyy = (v[:, 2:  , 1:-1] - 2*v[:, 1:-1, 1:-1] + v[:,  :-2, 1:-1]) / (dy**2)
+    vxx = (v[:, 1:-1, 2:  ] - 2*v[:, 1:-1, 1:-1] + v[:, 1:-1,  :-2]) / (dx**2)
+
+    py  = (p[:, 2:  , 1:-1] - p[:,  :-2, 1:-1]) / (2*dy)
+    px  = (p[:, 1:-1, 2:  ] - p[:, 1:-1,  :-2]) / (2*dx)
+
+    # No time derivative as we are assuming steady state solution
+    Du_dx = U[...,1:-1,1:-1 ,0]*ux + U[...,1:-1,1:-1, 1]*uy - (1/Re) * (uxx + uyy) + px
+    Dv_dy = U[...,1:-1,1:-1 ,0]*vx + U[...,1:-1,1:-1 ,1]*vy - (1/Re) * (vxx + vyy) + py
+    continuity_eq = (ux + vy)
+
+    fdm_derivatives = tuple([ux, uy, vx, vy, px, py, uxx, uyy, vxx, vyy, Du_dx, Dv_dy, continuity_eq])
+    
+    return Du_dx.float(), Dv_dy.float(), continuity_eq.float()#, fdm_derivatives
+
+def output_realiser(output, input_key, output_normalizer, input_key_normalizer, reverse_indices=None):
+
+    # rearrange (only makes a difference if input query coordinates was shuffled)
+    if reverse_indices is not None:
+        output = torch.concat([output[batch,index_order,:].unsqueeze(0) for batch, index_order in enumerate(reverse_indices)],dim=0)
+
+    output = output_normalizer.transform(output, inverse=True)
+    if input_key_normalizer is not None:
+        input_key = input_key_normalizer.transform(input_key, inverse=True)
+
+    # assuming isotropic grid:
+    dim = int(np.sqrt(output.shape[1]))
+    batches = output.shape[0]
+    channels = output.shape[-1]
+    output = output.reshape(batches, dim, dim, channels)
+    return output, input_key
