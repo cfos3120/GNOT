@@ -110,6 +110,10 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
             if train_loss.isnan(): pass #train_loss = 1e-6#raise ValueError('training loss is nan')
 
             train_loss.backward()
+
+            # Ignore gradient step if there are nulls
+            #if torch.stack([torch.isnan(p).any() for p in model.parameters()]).any(): pass
+
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
             optimizer.step()
             scheduler.step()
