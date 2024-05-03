@@ -144,7 +144,7 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
 
         if epoch == 0: cuda_get_all_memory_reserved()
 
-        print(f"[Epoch{epoch:4.0f}]: Train/Val Loss {mean_train_loss:7.4f}/{val_loss:7.4f} | Last Lid Vels: {torch.flatten(in_keys)}")
+        print(f"[Epoch{epoch:4.0f}]: Training loss {mean_train_loss:7.4f} | Train/Val Loss {mean_train_l2_loss:7.4f}/{val_loss:7.4f} | Last Lid Vels: {torch.flatten(in_keys)}")
     
     print('Training Complete')
     save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)
