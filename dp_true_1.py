@@ -45,7 +45,7 @@ parser.add_argument('--rand_cood'   , type=int  , default=0)
 parser.add_argument('--normalize_f' , type=int  , default=0)
 parser.add_argument('--DP'          , type=int  , default=0)
 parser.add_argument('--Optim'       , type=str  , default='Adamw')
-parser.add_argument('--Hybrid'       , type=str  , default=0)
+parser.add_argument('--Hybrid'      , type=int  , default=0)
 global ARGS 
 ARGS = parser.parse_args()
 
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     dataset_args['file_path']       = ARGS.path
     dataset_args['random_coords']   = ARGS.rand_cood == 1
     dataset_args['normalize_f']     = ARGS.normalize_f == 1
-    training_args['DP']            = ARGS.DP == 1
+    training_args['DP']             = ARGS.DP == 1
     training_args['Hybrid']         = ARGS.Hybrid == 1
     training_args['inference']      = ARGS.inference == 1
 
@@ -245,6 +245,9 @@ if __name__ == "__main__":
     
     # Initialize Model Training Recorder
     training_run_results = total_model_dict(model_config=model_args, training_config=training_args, data_config=dataset_args)
+    
+    if training_args['Hybrid']: print('Training in Hybrid mode with PDEs\n')
+    else: print('Training in Pure mode with only L2 Loss\n')
     
     train_model(model, 
                 train_loader, 
