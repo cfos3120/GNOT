@@ -172,9 +172,10 @@ if __name__ == "__main__":
     dataset_args['random_coords']   = ARGS.rand_cood == 1
     dataset_args['normalize_f']     = ARGS.normalize_f == 1
     
-    dataset_args['inference']      = ARGS.inference == 1
+    dataset_args['inference']       = ARGS.inference == 1
     training_args['DP']             = ARGS.DP == 1
     training_args['Hybrid']         = ARGS.Hybrid == 1
+    training_args['base_lr']        = ARGS.lr
 
     # Dataset Creation
     dataset = prepare_dataset(dataset_args)
