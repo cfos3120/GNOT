@@ -119,7 +119,12 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
 
             torch.nn.utils.clip_grad_norm_(model.parameters(),training_args['grad-clip'])
             optimizer.step()
+            if training_args['scheduler'] != 'adj_Cycle':
+                scheduler.step()
+
+        if training_args['scheduler'] == 'adj_Cycle':
             scheduler.step()
+
         
         mean_train_loss         = mean_train_loss       /len(train_loader)
         mean_train_l2_loss      = mean_train_l2_loss    /len(train_loader)
@@ -253,6 +258,15 @@ if __name__ == "__main__":
                                                         pct_start=0.2, 
                                                         final_div_factor=1e4, 
                                                         steps_per_epoch=len(train_loader), 
+                                                        epochs=training_args['epochs']
+                                                        )
+    elif ARGS.scheduler == 'adj_Cycle':
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
+                                                        max_lr=training_args['base_lr'], 
+                                                        div_factor=1e4, 
+                                                        pct_start=0.2, 
+                                                        final_div_factor=1e4, 
+                                                        steps_per_epoch=1, 
                                                         epochs=training_args['epochs']
                                                         )
     elif ARGS.scheduler == 'Step':
