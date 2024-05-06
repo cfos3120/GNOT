@@ -32,6 +32,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 parser = ArgumentParser(description='GNOT Artemis Training Study')
 parser.add_argument('--name'        , type=str  , default='test')
+parser.add_argument('--dir'         , type=str  , default='test_dir')
 parser.add_argument('--path'        , type=str  , default= r'C:\Users\Noahc\Documents\USYD\PHD\8 - Github\GNOT\data\steady_cavity_case_b200_maxU100ms_simple_normalized.npy')
 parser.add_argument('--epochs'      , type=int  , default=1)
 parser.add_argument('--sub_x'       , type=int  , default=4)
@@ -46,6 +47,8 @@ parser.add_argument('--normalize_f' , type=int  , default=0)
 parser.add_argument('--DP'          , type=int  , default=0)
 parser.add_argument('--Optim'       , type=str  , default='Adamw')
 parser.add_argument('--Hybrid'      , type=int  , default=0)
+parser.add_argument('--scheduler'   , type=str  , default='Cycle')
+parser.add_argument('--step_size'   , type=int  , default=50)
 global ARGS 
 ARGS = parser.parse_args()
 
@@ -166,16 +169,20 @@ if __name__ == "__main__":
     # Make adjustments based on ArgParser inputs
     dataset_args['sub_x']           = ARGS.sub_x
     dataset_args['batchsize']       = ARGS.batch_size
-    training_args['epochs']         = ARGS.epochs
-    training_args["save_name"]      = ARGS.name
     dataset_args['file_path']       = ARGS.path
     dataset_args['random_coords']   = ARGS.rand_cood == 1
     dataset_args['normalize_f']     = ARGS.normalize_f == 1
-    
     dataset_args['inference']       = ARGS.inference == 1
+
     training_args['DP']             = ARGS.DP == 1
     training_args['Hybrid']         = ARGS.Hybrid == 1
     training_args['base_lr']        = ARGS.lr
+    training_args['step_size']      = ARGS.step_size
+    training_args["save_name"]      = ARGS.name
+    training_args["save_dir"]       = ARGS.dir
+    training_args['epochs']         = ARGS.epochs
+    training_args['scheduler']      = ARGS.scheduler
+    
 
     # Dataset Creation
     dataset = prepare_dataset(dataset_args)
@@ -237,17 +244,20 @@ if __name__ == "__main__":
                         lr=training_args['base_lr'],
                         weight_decay=training_args['weight-decay']
                         )
-    else:
-        raise NotImplementedError
+    else: raise NotImplementedError
     
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
-                                                    max_lr=training_args['base_lr'], 
-                                                    div_factor=1e4, 
-                                                    pct_start=0.2, 
-                                                    final_div_factor=1e4, 
-                                                    steps_per_epoch=len(train_loader), 
-                                                    epochs=training_args['epochs']
-                                                    )
+    if ARGS.scheduler == 'Cycle':
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
+                                                        max_lr=training_args['base_lr'], 
+                                                        div_factor=1e4, 
+                                                        pct_start=0.2, 
+                                                        final_div_factor=1e4, 
+                                                        steps_per_epoch=len(train_loader), 
+                                                        epochs=training_args['epochs']
+                                                        )
+    elif ARGS.scheduler == 'Step':
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=training_args['step_size']*len(train_loader), gamma=0.7) #default step size 50
+    else: raise NotImplementedError
     
     # Initialize Model Training Recorder
     training_run_results = total_model_dict(model_config=model_args, training_config=training_args, data_config=dataset_args)
