@@ -49,6 +49,8 @@ parser.add_argument('--Optim'       , type=str  , default='Adamw')
 parser.add_argument('--Hybrid'      , type=int  , default=0)
 parser.add_argument('--scheduler'   , type=str  , default='Cycle')
 parser.add_argument('--step_size'   , type=int  , default=50)
+parser.add_argument('--init_w'      , type=int  , default=0)
+
 global ARGS 
 ARGS = parser.parse_args()
 
@@ -187,6 +189,8 @@ if __name__ == "__main__":
     training_args["save_dir"]       = ARGS.dir
     training_args['epochs']         = ARGS.epochs
     training_args['scheduler']      = ARGS.scheduler
+
+    model_args['init_w']            = ARGS.init_w == 1
     
 
     # Dataset Creation
@@ -217,6 +221,10 @@ if __name__ == "__main__":
     
     # Model Setup
     model = get_model(model_args)
+    
+    if model_args['init_w']:
+        model.apply(model._init_weights)
+
     if ARGS.DP:
         model = nn.DataParallel(model)
     model = model.to(device)

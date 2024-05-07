@@ -1,0 +1,5 @@
+This folder should contain the best trained models for each of the four problems:
+1. Inference Pure
+2. Inference Hybrid
+3. Extrapolation Pure
+4. Extrapolation Hybrid
