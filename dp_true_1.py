@@ -43,13 +43,15 @@ parser.add_argument('--seed'        , type=int  , default=42)
 parser.add_argument('--lr'          , type=float, default=0.001)
 parser.add_argument('--batch_size'  , type=int  , default=4)
 parser.add_argument('--rand_cood'   , type=int  , default=0)
-parser.add_argument('--normalize_f' , type=int  , default=0)
+parser.add_argument('--normalize_f' , type=int  , default=1)
 parser.add_argument('--DP'          , type=int  , default=0)
 parser.add_argument('--Optim'       , type=str  , default='Adamw')
 parser.add_argument('--Hybrid'      , type=int  , default=0)
 parser.add_argument('--scheduler'   , type=str  , default='Cycle')
 parser.add_argument('--step_size'   , type=int  , default=50)
 parser.add_argument('--init_w'      , type=int  , default=0)
+parser.add_argument('--datasplit'   , type=float, default=0.7)
+parser.add_argument('--ckpt_path'   , type=str  , default='None')
 
 global ARGS 
 ARGS = parser.parse_args()
@@ -112,7 +114,7 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
             mean_train_loss     += train_loss.item()
             mean_train_l2_loss  += l2_loss.item()
 
-            if train_loss.isnan(): pass #train_loss = 1e-6#raise ValueError('training loss is nan')
+            if train_loss.isnan(): raise ValueError('Training loss was NaN') #train_loss = 1e-6#raise ValueError('training loss is nan')
 
             train_loss.backward()
 
@@ -180,6 +182,7 @@ if __name__ == "__main__":
     dataset_args['random_coords']   = ARGS.rand_cood == 1
     dataset_args['normalize_f']     = ARGS.normalize_f == 1
     dataset_args['inference']       = ARGS.inference == 1
+    dataset_args['train_ratio']     = ARGS.datasplit
 
     training_args['DP']             = ARGS.DP == 1
     training_args['Hybrid']         = ARGS.Hybrid == 1
@@ -189,6 +192,7 @@ if __name__ == "__main__":
     training_args["save_dir"]       = ARGS.dir
     training_args['epochs']         = ARGS.epochs
     training_args['scheduler']      = ARGS.scheduler
+    training_args['ckpt']           = ARGS.ckpt_path
 
     model_args['init_w']            = ARGS.init_w == 1
     
@@ -228,6 +232,14 @@ if __name__ == "__main__":
     if ARGS.DP:
         model = nn.DataParallel(model)
     model = model.to(device)
+
+    # Use checkpoint
+    if training_args['ckpt'] != 'None':
+        ckpt_path = training_args['ckpt']
+        ckpt = torch.load(ckpt_path, map_location=device)
+        model.load_state_dict(ckpt['model'])
+        print('Weights loaded from %s' % ckpt_path)
+
 
     # Training Settings:
     loss_fn = LpLoss_custom()
