@@ -87,6 +87,9 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
         mean_train_pde1_loss = 0
         mean_train_pde2_loss = 0
         mean_train_pde3_loss = 0
+        mean_train_bc1_loss = 0
+        mean_train_bc2_loss = 0
+        mean_train_bc3_loss = 0
 
         for in_queries, in_keys, out_truth, reverse_indices in train_loader:
             optimizer.zero_grad()
@@ -97,7 +100,6 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
 
             # Pointwise Loss
             l2_loss = loss_fn(output, out_truth)
-            train_loss = l2_loss
 
             if training_args['Hybrid']:
                 output, in_keys = output_realiser(output, in_keys, output_normalizer, input_key_normalizer)
@@ -106,10 +108,22 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
                 pde2 = loss_fn(pde2)
                 pde3 = loss_fn(pde3)
 
-                train_loss += (pde1 + pde2 + pde3)/3
+                total_pde_loss = (pde1 + pde2 + pde3)/3
                 mean_train_pde1_loss += pde1.item()
                 mean_train_pde2_loss += pde2.item()
                 mean_train_pde3_loss += pde3.item()
+
+                # add boundary loss
+                bc1, bc2, bc3 = NS_FDM_cavity_boundary_vertex_non_dim(output, loss_fn)
+                total_bc_loss = (bc1 + bc2 + bc3)/3
+                mean_train_bc1_loss += bc1.item()
+                mean_train_bc2_loss += bc2.item()
+                mean_train_bc3_loss += bc3.item()
+            else:
+                total_pde_loss = 0.0
+                total_bc_loss = 0.0
+
+            train_loss = l2_loss + total_pde_loss + total_bc_loss
 
             mean_train_loss     += train_loss.item()
             mean_train_l2_loss  += l2_loss.item()
@@ -135,6 +149,9 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
         mean_train_pde1_loss    = mean_train_pde1_loss  /len(train_loader)
         mean_train_pde2_loss    = mean_train_pde2_loss  /len(train_loader)
         mean_train_pde3_loss    = mean_train_pde3_loss  /len(train_loader)
+        mean_train_bc1_loss     = mean_train_bc1_loss   /len(train_loader)
+        mean_train_bc2_loss     = mean_train_bc2_loss   /len(train_loader)
+        mean_train_bc3_loss     = mean_train_bc3_loss   /len(train_loader)
 
         epoch_end_time = default_timer()
 
@@ -146,6 +163,9 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
             recorder.update_loss({'Training X-Momentum': mean_train_pde1_loss})
             recorder.update_loss({'Training Y-Momentum': mean_train_pde2_loss})
             recorder.update_loss({'Training Continuity': mean_train_pde3_loss})
+            recorder.update_loss({'U Boundary': mean_train_bc1_loss})
+            recorder.update_loss({'V Boundary': mean_train_bc2_loss})
+            recorder.update_loss({'P Boundary': mean_train_bc3_loss})
 
         if eval_loader is not None:
             val_loss = validation(model, eval_loader)
@@ -156,7 +176,7 @@ def train_model(model, train_loader, training_args, loss_fn, recorder, eval_load
 
         if epoch == 0: cuda_get_all_memory_reserved()
 
-        print(f"[Epoch{epoch:4.0f}]: Training loss {mean_train_loss:7.4f} | Train/Val Loss {mean_train_l2_loss:7.4f}/{val_loss:7.4f} | Last Lid Vels: {torch.flatten(in_keys)}")
+        print(f"[Epoch{epoch:4.0f}]: Training Loss {mean_train_loss:7.4f} | Train/Val Loss {mean_train_l2_loss:7.4f}/{val_loss:7.4f} | PDE Loss {(mean_train_pde1_loss+mean_train_pde2_loss+mean_train_pde3_loss)/3:7.4f}")
     
     print('Training Complete')
     save_checkpoint(training_args["save_dir"], training_args["save_name"], model=model, loss_dict=training_run_results.dictionary, optimizer=optimizer)

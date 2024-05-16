@@ -380,6 +380,38 @@ def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L, pressure_overi
     
     return Du_dx.float(), Dv_dy.float(), continuity_eq.float()#, fdm_derivatives
 
+def NS_FDM_cavity_boundary_vertex_non_dim(output, loss_fn):
+
+    # velocity
+    lid     = output[:,-1,:,:]
+    wall_l  = output[:,1:-1,0,:]
+    wall_r  = output[:,1:-1,-1,:]
+    wall_b  = output[:,0,:,:]
+
+    bc1 = (loss_fn(lid[...,0], torch.ones_like(lid[...,0])) + 
+           loss_fn(wall_l[...,0]) + 
+           loss_fn(wall_r[...,0]) + 
+           loss_fn(wall_b[...,0])
+           )/4
+    bc2 = (loss_fn(lid[...,1]) + 
+           loss_fn(wall_l[...,1]) + 
+           loss_fn(wall_r[...,1]) + 
+           loss_fn(wall_b[...,1])
+           )/4
+
+    # Pressure
+    bc3 = (loss_fn(lid[...,2], output[:,-2,:,2]) + 
+           loss_fn(wall_l[...,2], output[:,1:-1,1,2]) + 
+           loss_fn(wall_r[...,2], output[:,1:-1,-2,2]) + 
+           loss_fn(wall_b[...,2], output[:,1,:,2])
+           )/4
+    
+    return bc1, bc2, bc3
+
+
+
+
+
 def output_realiser(output, input_key, output_normalizer, input_key_normalizer, reverse_indices=None):
 
     # rearrange (only makes a difference if input query coordinates was shuffled)
