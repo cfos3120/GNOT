@@ -52,6 +52,7 @@ parser.add_argument('--step_size'   , type=int  , default=50)
 parser.add_argument('--init_w'      , type=int  , default=0)
 parser.add_argument('--datasplit'   , type=float, default=0.7)
 parser.add_argument('--ckpt_path'   , type=str  , default='None')
+parser.add_argument('--model_name'  , type=str  , default='CGPTNO')
 
 global ARGS 
 ARGS = parser.parse_args()
@@ -215,6 +216,7 @@ if __name__ == "__main__":
     training_args['ckpt']           = ARGS.ckpt_path
 
     model_args['init_w']            = ARGS.init_w == 1
+    model_args['model_name']        = ARGS.model_name
     
 
     # Dataset Creation

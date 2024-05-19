@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
 
 from models.noahs_model import CGPTNO
+from models.noahs_model_2 import GNOT
 from utils import UnitTransformer
 
 class Cavity_2D_dataset_for_GNOT():
@@ -244,6 +245,7 @@ def get_default_args():
     model_args['mlp_layers']        = 2
     model_args['act']               = 'gelu'
     model_args['hfourier_dim']      = 0
+    model_args['model_name']        = 'CGPTNO'
 
     training_args = dict()
     training_args['epochs']                 = 1
@@ -258,20 +260,39 @@ def get_default_args():
     return dataset_args, model_args, training_args
 
 def get_model(args):
-    model = CGPTNO(
-                trunk_size          = args['trunk_size'] + args['theta_size'],
-                branch_sizes        = args['branch_sizes'], 
-                output_size         = args['output_size'],
-                n_layers            = args['n_layers'],
-                n_hidden            = args['n_hidden'],
-                n_head              = args['n_head'],
-                attn_type           = args['attn_type'],
-                ffn_dropout         = args['ffn_dropout'],
-                attn_dropout        = args['attn_dropout'],
-                mlp_layers          = args['mlp_layers'],
-                act                 = args['act'],
-                horiz_fourier_dim   = args['hfourier_dim']
-                )
+
+    if args['model_name'] == 'CGPTNO':
+        model = CGPTNO(
+                    trunk_size          = args['trunk_size'] + args['theta_size'],
+                    branch_sizes        = args['branch_sizes'], 
+                    output_size         = args['output_size'],
+                    n_layers            = args['n_layers'],
+                    n_hidden            = args['n_hidden'],
+                    n_head              = args['n_head'],
+                    attn_type           = args['attn_type'],
+                    ffn_dropout         = args['ffn_dropout'],
+                    attn_dropout        = args['attn_dropout'],
+                    mlp_layers          = args['mlp_layers'],
+                    act                 = args['act'],
+                    horiz_fourier_dim   = args['hfourier_dim']
+                    )
+    elif args['model_name'] == 'GNOT':
+        model = GNOT(
+                    trunk_size          = args['trunk_size'] + args['theta_size'],
+                    branch_sizes        = args['branch_sizes'], 
+                    output_size         = args['output_size'],
+                    n_layers            = args['n_layers'],
+                    n_hidden            = args['n_hidden'],
+                    n_head              = args['n_head'],
+                    attn_type           = args['attn_type'],
+                    ffn_dropout         = args['ffn_dropout'],
+                    attn_dropout        = args['attn_dropout'],
+                    mlp_layers          = args['mlp_layers'],
+                    act                 = args['act'],
+                    horiz_fourier_dim   = args['hfourier_dim'],
+                    space_dim=2
+                    )
+    else: raise NotImplemented("model name does not exist")
     
     return model
 
