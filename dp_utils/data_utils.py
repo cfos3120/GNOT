@@ -344,14 +344,14 @@ def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L, pressure_overi
     device = U.device
 
     # assign Reynolds Number array:
-    Re = (lid_velocity * L/nu).repeat(1,nx-2,ny-2)
+    Re = (lid_velocity * L/nu).repeat(1,nx,ny)
 
     # create isotropic grid (non-dimensional i.e. L=1.0)
     y = torch.tensor(np.linspace(0.0, 1.0, nx), dtype=torch.float, device=device)
     x = y
 
     # initialize Storage of derivatives as zeros
-    ux = torch.zeros([batchsize, nx-2, ny-2])
+    ux = torch.zeros([batchsize, nx, ny])
     uy = torch.zeros_like(ux)
     vx = torch.zeros_like(ux)
     vy = torch.zeros_like(ux)
@@ -365,15 +365,23 @@ def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L, pressure_overi
     # second order first derivative scheme
     dx = abs(x[1]-x[0])
     dy = dx
-       
-    u = torch.zeros([batchsize, nx-2, ny-2])
+    
+    # Create padding
+    u = torch.zeros([batchsize, nx+2, ny+2])
     v = torch.zeros_like(u)
     p = torch.zeros_like(u)
     
     # assign internal field
-    u = U[...,0]
-    v = U[...,1]
-    p = U[...,2]
+    u[...,1:-1,1:-1] = U[...,0]
+    v[...,1:-1,1:-1] = U[...,1]
+    p[...,1:-1,1:-1] = U[...,2]
+
+    #Fill in padding
+    u[:,-1,:] = 1.0
+    p[:,-1,:]     = p[:,-2,:]
+    p[:,1:-1,0]   = p[:,1:-1,1]
+    p[:,1:-1,-1]  = p[:,1:-1,-2]
+    p[:,0,:]      = p[:,1,:]
 
     if pressure_overide:
         p = (u**2 + v**2)*1/2           #density is one
@@ -393,8 +401,8 @@ def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L, pressure_overi
     px  = (p[:, 1:-1, 2:  ] - p[:, 1:-1,  :-2]) / (2*dx)
 
     # No time derivative as we are assuming steady state solution
-    Du_dx = U[...,1:-1,1:-1 ,0]*ux + U[...,1:-1,1:-1, 1]*uy - (1/Re) * (uxx + uyy) + px
-    Dv_dy = U[...,1:-1,1:-1 ,0]*vx + U[...,1:-1,1:-1 ,1]*vy - (1/Re) * (vxx + vyy) + py
+    Du_dx = U[...,0]*ux + U[...,1]*uy - (1/Re) * (uxx + uyy) + px
+    Dv_dy = U[...,0]*vx + U[...,1]*vy - (1/Re) * (vxx + vyy) + py
     continuity_eq = (ux + vy)
 
     fdm_derivatives = tuple([ux, uy, vx, vy, px, py, uxx, uyy, vxx, vyy, Du_dx, Dv_dy, continuity_eq])
