@@ -367,9 +367,9 @@ def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L, pressure_overi
     dy = dx
     
     # Create padding
-    u = torch.zeros([batchsize, nx+2, ny+2])
-    v = torch.zeros_like(u)
-    p = torch.zeros_like(u)
+    u = torch.zeros([batchsize, nx+2, ny+2], dtype=torch.float, device=device)
+    v = torch.zeros_like(u, dtype=torch.float, device=device)
+    p = torch.zeros_like(u, dtype=torch.float, device=device)
     
     # assign internal field
     u[...,1:-1,1:-1] = U[...,0]
@@ -377,7 +377,7 @@ def NS_FDM_cavity_internal_vertex_non_dim(U, lid_velocity, nu, L, pressure_overi
     p[...,1:-1,1:-1] = U[...,2]
 
     #Fill in padding
-    u[:,-1,:] = 1.0
+    u[:,-1,:]     = 1.0
     p[:,-1,:]     = p[:,-2,:]
     p[:,1:-1,0]   = p[:,1:-1,1]
     p[:,1:-1,-1]  = p[:,1:-1,-2]
