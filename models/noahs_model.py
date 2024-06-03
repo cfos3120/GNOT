@@ -41,12 +41,12 @@ class GPTConfig():
     X: N*T*C --> N*(4*n + 3)*C 
 '''
 def horizontal_fourier_embedding(X, n=3):
-    freqs = 2**torch.linspace(-n, n, 2*n+1).to(X.device)
+    freqs = 2**torch.linspace(-n, n, 2*n+1).to(X.device) #[2^-3 ... 2^3] 7
     freqs = freqs[None,None,None,...]
-    X_ = X.unsqueeze(-1).repeat([1,1,1,2*n+1])
+    X_ = X.unsqueeze(-1).repeat([1,1,1,2*n+1]) #[N, T, C] -> [N, T, C, 7]
     X_cos = torch.cos(freqs * X_)
-    X_sin = torch.sin(freqs * X_)
-    X = torch.cat([X.unsqueeze(-1), X_cos, X_sin],dim=-1).view(X.shape[0],X.shape[1],-1)
+    X_sin = torch.sin(freqs * X_) 
+    X = torch.cat([X.unsqueeze(-1), X_cos, X_sin],dim=-1).view(X.shape[0],X.shape[1],-1) #[N, T, C, 1] Cos: [N, T, C, 7] Sin: [N, T, C, 7],
     return X
 
 
@@ -89,7 +89,7 @@ class LinearAttention(nn.Module):
 
 
         if self.attn_type == 'l1':
-            q = q
+            q = q.softmax(dim=-1)
             k = k.softmax(dim=-1)   #
             k_cumsum = k.sum(dim=-2, keepdim=True)
             D_inv = 1. / (q * k_cumsum).sum(dim=-1, keepdim=True)       # normalized
