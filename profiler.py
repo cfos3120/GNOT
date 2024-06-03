@@ -73,7 +73,7 @@ def run_gnot(num_iters=5, device="cuda:0", tokens = 70000):
 
     input_1 = torch.rand([4,tokens,2]).to(device)
     input_2 = torch.rand([4,1,1]).to(device)
-    output_real = torch.rand([4,tokens,3])
+    output_real = torch.rand([4,tokens,3]).to(device)
 
     optimizer = optimizer = torch.optim.AdamW(model.parameters(),     
                                     betas=(0.9, 0.999), 
